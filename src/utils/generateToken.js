@@ -1,0 +1,1 @@
+// Helper para generar JWT
