@@ -1,10 +1,8 @@
 import dotenv from 'dotenv';
-dotenv.config();
-
+dotenv.config(); // debe ir primero para que process.env esté disponible
 import express from 'express';
 import cors from 'cors';
-import connectDB from './src/config/db.js';
-
+import mongoose from 'mongoose';
 import authRoutes from './src/routes/authRoutes.js';
 import complejosRoutes from './src/routes/complejosRoutes.js';
 import canchasRoutes from './src/routes/canchasRoutes.js';
@@ -17,7 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Servidor de PadelTime funcionando correctamente' });
+  res.json({ status: 'Servidor de PadelTime funcionando' });
 });
 
 app.use('/api/auth', authRoutes);
@@ -29,8 +27,15 @@ app.use((req, res) => {
   res.status(404).json({ mensaje: 'Ruta no encontrada.' });
 });
 
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('MongoDB conectado');
+    app.listen(PORT, () => {
+      console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Error al conectar MongoDB:', err.message);
+    process.exit(1);
   });
-});
