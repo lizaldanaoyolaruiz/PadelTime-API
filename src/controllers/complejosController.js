@@ -1,6 +1,8 @@
 import { Readable } from 'stream';
 import cloudinary from '../config/cloudinary.js';
 import Complejo from '../models/Complejo.js';
+import ActivityLog from '../models/ActivityLog.js';
+import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
 
 const subirImagen = (buffer, folder) =>
   new Promise((resolve, reject) => {
@@ -14,6 +16,8 @@ const subirImagen = (buffer, folder) =>
 const esOwnerOAdmin = (complejo, userId, role) =>
   complejo.owner.toString() === userId.toString() || role === 'admin';
 
+// ─── OWNER ENDPOINTS ─────────────────────────────────────────────────────────
+
 // POST /api/complejos
 export const crearComplejo = async (req, res) => {
   try {
@@ -22,20 +26,25 @@ export const crearComplejo = async (req, res) => {
       return res.status(400).json({ mensaje: 'Ya tenés un complejo registrado.' });
     }
 
-    const { nombre, direccion, whatsapp, instagram, porcentaje_sena } = req.body;
+    const { name, location, city, whatsapp, instagram, porcentaje_sena, price, openTime, closeTime, courts } = req.body;
 
-    if (!nombre || !direccion) {
-      return res.status(400).json({ mensaje: 'Nombre y dirección son obligatorios.' });
+    if (!name || !location) {
+      return res.status(400).json({ mensaje: 'Nombre y ubicación son obligatorios.' });
     }
 
     const complejo = await Complejo.create({
       owner: req.user._id,
-      nombre,
-      direccion,
+      name,
+      location,
+      city,
       whatsapp,
       instagram,
       porcentaje_sena,
-      estado: 'pendiente',
+      price,
+      openTime,
+      closeTime,
+      courts,
+      status: 'pending',
     });
 
     res.status(201).json({ complejo });
@@ -55,7 +64,6 @@ export const getMiComplejo = async (req, res) => {
       return res.status(404).json({ mensaje: 'No tenés ningún complejo registrado.' });
     }
 
-    // Enmascarar la key — solo mostrar los últimos 4 caracteres
     const data = complejo.toObject();
     if (data.mercadopago_public_key) {
       data.mercadopago_public_key = '••••••••' + data.mercadopago_public_key.slice(-4);
@@ -78,8 +86,9 @@ export const actualizarComplejo = async (req, res) => {
     }
 
     const campos = [
-      'nombre', 'direccion', 'whatsapp', 'instagram',
+      'name', 'location', 'city', 'whatsapp', 'instagram',
       'porcentaje_sena', 'mercadopago_public_key', 'mercadopago_activo',
+      'price', 'openTime', 'closeTime', 'courts', 'image',
     ];
 
     campos.forEach((campo) => {
@@ -89,7 +98,7 @@ export const actualizarComplejo = async (req, res) => {
     await complejo.save();
 
     const data = complejo.toObject();
-    delete data.mercadopago_public_key; // nunca devolver la key completa
+    delete data.mercadopago_public_key;
     res.json({ complejo: data });
   } catch (error) {
     res.status(500).json({ mensaje: 'Error al actualizar complejo.', error: error.message });
@@ -115,6 +124,7 @@ export const subirFotos = async (req, res) => {
     );
 
     complejo.fotos.push(...resultados.map((r) => r.secure_url));
+    if (!complejo.image) complejo.image = resultados[0].secure_url;
     await complejo.save();
 
     res.json({ fotos: complejo.fotos });
@@ -135,9 +145,9 @@ export const eliminarFoto = async (req, res) => {
 
     const { url } = req.body;
     complejo.fotos = complejo.fotos.filter((f) => f !== url);
+    if (complejo.image === url) complejo.image = complejo.fotos[0] || null;
     await complejo.save();
 
-    // Elimina de Cloudinary usando el public_id
     const segments = url.split('/');
     const fileWithExt = segments[segments.length - 1];
     const publicId = `padeltime/complejos/${complejo._id}/${fileWithExt.split('.')[0]}`;
@@ -146,5 +156,135 @@ export const eliminarFoto = async (req, res) => {
     res.json({ fotos: complejo.fotos });
   } catch (error) {
     res.status(500).json({ mensaje: 'Error al eliminar foto.', error: error.message });
+  }
+};
+
+// ─── SUPER ADMIN ENDPOINTS ────────────────────────────────────────────────────
+
+// GET /api/complexes/admin
+export const getAdminComplejos = async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    const filter = {};
+    if (status && status !== 'all') filter.status = status;
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const [complejos, total, pending, approved, rejected, suspended] = await Promise.all([
+      Complejo.find(filter)
+        .populate('owner', 'nombre apellido email')
+        .sort({ createdAt: -1 }),
+      Complejo.countDocuments(),
+      Complejo.countDocuments({ status: 'pending' }),
+      Complejo.countDocuments({ status: 'approved' }),
+      Complejo.countDocuments({ status: 'rejected' }),
+      Complejo.countDocuments({ status: 'suspended' }),
+    ]);
+
+    res.json({
+      data: complejos,
+      stats: { total, pending, approved, rejected, suspended },
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// PATCH /api/complexes/:id/approve
+export const aprobarComplejo = async (req, res) => {
+  try {
+    const complejo = await Complejo.findById(req.params.id).populate('owner', 'nombre apellido email');
+    if (!complejo) return res.status(404).json({ message: 'Complejo no encontrado' });
+
+    complejo.status = 'approved';
+    complejo.rejectReason = undefined;
+    await complejo.save();
+
+    await ActivityLog.create({
+      action: 'approved',
+      complexId: complejo._id,
+      complexName: complejo.name,
+      adminId: req.user._id,
+      adminName: `${req.user.nombre} ${req.user.apellido || ''}`.trim(),
+    });
+
+    sendApprovalEmail(complejo).catch((err) =>
+      console.error('[emailService] Error al enviar aprobación:', err.message)
+    );
+
+    res.json({ message: 'Complejo aprobado exitosamente', complex: complejo });
+  } catch (error) {
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// PATCH /api/complexes/:id/reject
+export const rechazarComplejo = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const complejo = await Complejo.findById(req.params.id).populate('owner', 'nombre apellido email');
+    if (!complejo) return res.status(404).json({ message: 'Complejo no encontrado' });
+
+    complejo.status = 'rejected';
+    complejo.rejectReason = reason;
+    await complejo.save();
+
+    await ActivityLog.create({
+      action: 'rejected',
+      complexId: complejo._id,
+      complexName: complejo.name,
+      adminId: req.user._id,
+      adminName: `${req.user.nombre} ${req.user.apellido || ''}`.trim(),
+      reason,
+    });
+
+    sendRejectionEmail(complejo, reason).catch((err) =>
+      console.error('[emailService] Error al enviar rechazo:', err.message)
+    );
+
+    res.json({ message: 'Complejo rechazado', complex: complejo });
+  } catch (error) {
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// PATCH /api/complexes/:id/suspend
+export const suspenderComplejo = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const complejo = await Complejo.findById(req.params.id).populate('owner', 'nombre apellido email');
+    if (!complejo) return res.status(404).json({ message: 'Complejo no encontrado' });
+
+    complejo.status = 'suspended';
+    complejo.rejectReason = reason;
+    await complejo.save();
+
+    await ActivityLog.create({
+      action: 'suspended',
+      complexId: complejo._id,
+      complexName: complejo.name,
+      adminId: req.user._id,
+      adminName: `${req.user.nombre} ${req.user.apellido || ''}`.trim(),
+      reason,
+    });
+
+    res.json({ message: 'Complejo suspendido', complex: complejo });
+  } catch (error) {
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// GET /api/complexes/activity
+export const getActivityLog = async (req, res) => {
+  try {
+    const logs = await ActivityLog.find().sort({ createdAt: -1 }).limit(20);
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
