@@ -1,5 +1,6 @@
-import nodemailer from 'nodemailer';
+// import nodemailer from 'nodemailer';
 
+/*
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT) || 587,
@@ -9,22 +10,24 @@ const transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASS,
   },
 });
+*/
 
 export const enviarBienvenida = async ({ nombre, email, role }) => {
-  const rolesLabel = { owner: 'Dueño de Complejo', player: 'Jugador', admin: 'Administrador' };
+  console.log(`[email simulado] Bienvenida → ${email} | Nombre: ${nombre} | Rol: ${role}`);
+};
 
-  await transporter.sendMail({
-    from: `"PadelTime" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to: email,
-    subject: '¡Bienvenido a PadelTime!',
-    html: `
-      <div style="font-family: sans-serif; max-width: 480px; margin: auto;">
-        <h2 style="color: #c1ff72;">¡Bienvenido, ${nombre}!</h2>
-        <p>Tu cuenta fue creada exitosamente como <strong>${rolesLabel[role] || role}</strong>.</p>
-        <p>Tu próxima victoria empieza aquí. 🎾</p>
-        <hr/>
-        <small style="color:#888;">PadelTime — Gestión de Alto Rendimiento</small>
-      </div>
-    `,
-  });
+export const sendApprovalEmail = async (complejo) => {
+  const ownerEmail = complejo.owner?.email;
+  const ownerNombre = complejo.owner?.nombre || 'owner';
+  console.log(
+    `[email simulado] Aprobación → ${ownerEmail} | Hola ${ownerNombre}, tu complejo "${complejo.name}" fue aprobado.`
+  );
+};
+
+export const sendRejectionEmail = async (complejo, reason) => {
+  const ownerEmail = complejo.owner?.email;
+  const ownerNombre = complejo.owner?.nombre || 'owner';
+  console.log(
+    `[email simulado] Rechazo → ${ownerEmail} | Hola ${ownerNombre}, tu complejo "${complejo.name}" fue rechazado. Motivo: ${reason}`
+  );
 };
