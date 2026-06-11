@@ -13,13 +13,14 @@ export const proteger = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Solo busca el usuario para confirmar que sigue existiendo; el rol viene del token
     const user = await User.findById(decoded.id);
-    if (!user) return res.status(401).json({ mensaje: 'Usuario no encontrado.' });
+    if (!user) return res.status(401).json({ message: 'Token inválido o expirado' });
 
     req.user = user;
     next();
   } catch {
-    return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
+    return res.status(401).json({ message: 'Token inválido o expirado' });
   }
 };
+
+export const authenticate = proteger;
