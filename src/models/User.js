@@ -9,6 +9,14 @@ const userSchema = new Schema(
       type: String,
       required: [true, 'El nombre es obligatorio'],
       trim: true,
+      minlength: 3,
+      maxlength: 50,
+    },
+    apellido: {
+      type: String,
+      trim: true,
+      default: '',
+      maxlength: 50,
     },
     email: {
       type: String,
@@ -20,19 +28,18 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: [true, 'La contraseña es obligatoria'],
-      minlength: [6, 'La contraseña debe tener al menos 6 caracteres'],
-      select: false, // nunca se devuelve en queries
+      minlength: [8, 'La contraseña debe tener al menos 8 caracteres'],
+      select: false,
     },
     role: {
       type: String,
-      enum: ['owner', 'player', 'admin'],
-      default: 'player',
+      enum: ['user', 'owner', 'player', 'admin', 'SUPER_ADMIN'],
+      default: 'user',
     },
   },
   { timestamps: true }
 );
 
-// Hashea la contraseña antes de guardar
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);

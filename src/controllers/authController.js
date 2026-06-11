@@ -5,6 +5,7 @@ import { enviarBienvenida } from '../services/emailService.js';
 const formatearUsuario = (user) => ({
   id: user._id,
   nombre: user.nombre,
+  apellido: user.apellido || '',
   email: user.email,
   role: user.role,
 });
