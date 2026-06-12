@@ -9,7 +9,7 @@ const activityLogSchema = new Schema(
       required: true,
       enum: ['approved', 'rejected', 'suspended'],
     },
-    complexId: { type: Schema.Types.ObjectId, ref: 'Complejo' },
+    complexId: { type: Schema.Types.ObjectId, ref: 'Complex' },
     complexName: { type: String },
     adminId: { type: Schema.Types.ObjectId, ref: 'User' },
     adminName: { type: String },
