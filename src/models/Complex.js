@@ -1,21 +1,17 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const { Schema } = mongoose;
-
-const complexSchema = new Schema(
+const complexSchema = new mongoose.Schema(
   {
-    owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     name: { type: String, required: true, trim: true },
     location: { type: String, trim: true },
     city: { type: String, trim: true },
+    description: { type: String, trim: true },
     image: { type: String },
     photos: { type: [String], default: [] },
     price: { type: Number },
     openTime: { type: String },
     closeTime: { type: String },
-    courts: { type: Number, default: 1 },
-    rating: { type: Number, default: 0 },
-    reviewCount: { type: Number, default: 0 },
     whatsapp: { type: String, trim: true },
     instagram: { type: String, trim: true },
     mercadopagoPublicKey: { type: String, select: false },
@@ -31,4 +27,4 @@ const complexSchema = new Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('Complex', complexSchema);
+module.exports = mongoose.model('Complex', complexSchema);
