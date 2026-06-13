@@ -1,8 +1,8 @@
-import { Readable } from 'stream';
-import cloudinary from '../config/cloudinary.js';
-import Complex from '../models/Complex.js';
-import ActivityLog from '../models/ActivityLog.js';
-import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
+const { Readable } = require('stream');
+const cloudinary = require('../config/cloudinary');
+const Complex = require('../models/Complex');
+const ActivityLog = require('../models/ActivityLog');
+const { sendApprovalEmail, sendRejectionEmail } = require('../services/emailService');
 
 const uploadImage = (buffer, folder) =>
   new Promise((resolve, reject) => {
@@ -13,27 +13,21 @@ const uploadImage = (buffer, folder) =>
     Readable.from(buffer).pipe(stream);
   });
 
-const isOwnerOrAdmin = (complex, userId, role) =>
-  complex.owner.toString() === userId.toString() || role === 'SUPER_ADMIN';
-
-// ─── OWNER ───────────────────────────────────────────────────────────────────
+const isOwner = (complex, userId) =>
+  complex.owner.toString() === userId.toString();
 
 // POST /api/complexes
-export const createComplex = async (req, res) => {
+const createComplex = async (req, res) => {
   try {
     const exists = await Complex.findOne({ owner: req.user._id });
     if (exists) return res.status(400).json({ message: 'You already have a registered complex.' });
 
-    const { name, location, city, whatsapp, instagram, depositPercentage, price, openTime, closeTime, courts } = req.body;
-
-    if (!name || !location) {
-      return res.status(400).json({ message: 'Name and location are required.' });
-    }
+    const { name, location, city, description, whatsapp, instagram, depositPercentage, price, openTime, closeTime } = req.body;
 
     const complex = await Complex.create({
       owner: req.user._id,
-      name, location, city, whatsapp, instagram,
-      depositPercentage, price, openTime, closeTime, courts,
+      name, location, city, description, whatsapp, instagram,
+      depositPercentage, price, openTime, closeTime,
       status: 'pending',
     });
 
@@ -44,7 +38,7 @@ export const createComplex = async (req, res) => {
 };
 
 // GET /api/complexes/me
-export const getMyComplex = async (req, res) => {
+const getMyComplex = async (req, res) => {
   try {
     const complex = await Complex.findOne({ owner: req.user._id }).select('+mercadopagoPublicKey');
     if (!complex) return res.status(404).json({ message: 'No complex registered.' });
@@ -61,25 +55,23 @@ export const getMyComplex = async (req, res) => {
 };
 
 // PUT /api/complexes/:id
-export const updateComplex = async (req, res) => {
+const updateComplex = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
 
-    if (!isOwnerOrAdmin(complex, req.user._id, req.user.role)) {
+    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
       return res.status(403).json({ message: 'Not authorized to edit this complex.' });
     }
 
     const fields = [
-      'name', 'location', 'city', 'whatsapp', 'instagram',
+      'name', 'location', 'city', 'description', 'whatsapp', 'instagram',
       'depositPercentage', 'mercadopagoPublicKey', 'mercadopagoActive',
-      'price', 'openTime', 'closeTime', 'courts', 'image',
+      'price', 'openTime', 'closeTime', 'image',
     ];
-
     fields.forEach((f) => { if (req.body[f] !== undefined) complex[f] = req.body[f]; });
 
     await complex.save();
-
     const data = complex.toObject();
     delete data.mercadopagoPublicKey;
     res.json({ complex: data });
@@ -89,16 +81,18 @@ export const updateComplex = async (req, res) => {
 };
 
 // POST /api/complexes/:id/photos
-export const uploadPhotos = async (req, res) => {
+const uploadPhotos = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
 
-    if (!isOwnerOrAdmin(complex, req.user._id, req.user.role)) {
-      return res.status(403).json({ message: 'Not authorized to upload photos.' });
+    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Not authorized.' });
     }
 
-    if (!req.files?.length) return res.status(400).json({ message: 'No images provided.' });
+    if (!req.files || !req.files.length) {
+      return res.status(400).json({ message: 'No images provided.' });
+    }
 
     const results = await Promise.all(
       req.files.map((f) => uploadImage(f.buffer, `padeltime/complexes/${complex._id}`))
@@ -114,14 +108,14 @@ export const uploadPhotos = async (req, res) => {
   }
 };
 
-// DELETE /api/complexes/:id/photos  — body: { url }
-export const deletePhoto = async (req, res) => {
+// DELETE /api/complexes/:id/photos — body: { url }
+const deletePhoto = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
 
-    if (!isOwnerOrAdmin(complex, req.user._id, req.user.role)) {
-      return res.status(403).json({ message: 'Not authorized to delete photos.' });
+    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Not authorized.' });
     }
 
     const { url } = req.body;
@@ -139,13 +133,10 @@ export const deletePhoto = async (req, res) => {
   }
 };
 
-// ─── SUPER ADMIN ─────────────────────────────────────────────────────────────
-
-// GET /api/complexes/admin
-export const getAdminComplexes = async (req, res) => {
+// GET /api/complexes/admin  (superadmin)
+const getAdminComplexes = async (req, res) => {
   try {
     const { status, search } = req.query;
-
     const filter = {};
     if (status && status !== 'all') filter.status = status;
     if (search) {
@@ -156,7 +147,7 @@ export const getAdminComplexes = async (req, res) => {
     }
 
     const [complexes, total, pending, approved, rejected, suspended] = await Promise.all([
-      Complex.find(filter).populate('owner', 'nombre apellido email').sort({ createdAt: -1 }),
+      Complex.find(filter).populate('owner', 'name email').sort({ createdAt: -1 }),
       Complex.countDocuments(),
       Complex.countDocuments({ status: 'pending' }),
       Complex.countDocuments({ status: 'approved' }),
@@ -170,10 +161,10 @@ export const getAdminComplexes = async (req, res) => {
   }
 };
 
-// PATCH /api/complexes/:id/approve
-export const approveComplex = async (req, res) => {
+// PATCH /api/complexes/:id/approve  (superadmin)
+const approveComplex = async (req, res) => {
   try {
-    const complex = await Complex.findById(req.params.id).populate('owner', 'nombre apellido email');
+    const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
 
     complex.status = 'approved';
@@ -185,24 +176,24 @@ export const approveComplex = async (req, res) => {
       complexId: complex._id,
       complexName: complex.name,
       adminId: req.user._id,
-      adminName: `${req.user.nombre} ${req.user.apellido || ''}`.trim(),
+      adminName: req.user.name,
     });
 
-    sendApprovalEmail(complex).catch((err) =>
-      console.error('[emailService] Approval email error:', err.message)
+    sendApprovalEmail(complex.owner).catch((err) =>
+      console.error('[email] Approval error:', err.message)
     );
 
-    res.json({ message: 'Complex approved successfully.', complex });
+    res.json({ message: 'Complex approved.', complex });
   } catch (error) {
     res.status(500).json({ message: 'Internal server error.' });
   }
 };
 
-// PATCH /api/complexes/:id/reject
-export const rejectComplex = async (req, res) => {
+// PATCH /api/complexes/:id/reject  (superadmin)
+const rejectComplex = async (req, res) => {
   try {
     const { reason } = req.body;
-    const complex = await Complex.findById(req.params.id).populate('owner', 'nombre apellido email');
+    const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
 
     complex.status = 'rejected';
@@ -214,12 +205,12 @@ export const rejectComplex = async (req, res) => {
       complexId: complex._id,
       complexName: complex.name,
       adminId: req.user._id,
-      adminName: `${req.user.nombre} ${req.user.apellido || ''}`.trim(),
+      adminName: req.user.name,
       reason,
     });
 
-    sendRejectionEmail(complex, reason).catch((err) =>
-      console.error('[emailService] Rejection email error:', err.message)
+    sendRejectionEmail(complex.owner, reason).catch((err) =>
+      console.error('[email] Rejection error:', err.message)
     );
 
     res.json({ message: 'Complex rejected.', complex });
@@ -228,11 +219,11 @@ export const rejectComplex = async (req, res) => {
   }
 };
 
-// PATCH /api/complexes/:id/suspend
-export const suspendComplex = async (req, res) => {
+// PATCH /api/complexes/:id/suspend  (superadmin)
+const suspendComplex = async (req, res) => {
   try {
     const { reason } = req.body;
-    const complex = await Complex.findById(req.params.id).populate('owner', 'nombre apellido email');
+    const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
 
     complex.status = 'suspended';
@@ -244,7 +235,7 @@ export const suspendComplex = async (req, res) => {
       complexId: complex._id,
       complexName: complex.name,
       adminId: req.user._id,
-      adminName: `${req.user.nombre} ${req.user.apellido || ''}`.trim(),
+      adminName: req.user.name,
       reason,
     });
 
@@ -254,12 +245,8 @@ export const suspendComplex = async (req, res) => {
   }
 };
 
-// GET /api/complexes/activity
-export const getActivityLog = async (req, res) => {
-  try {
-    const logs = await ActivityLog.find().sort({ createdAt: -1 }).limit(20);
-    res.json(logs);
-  } catch (error) {
-    res.status(500).json({ message: 'Internal server error.' });
-  }
+module.exports = {
+  createComplex, getMyComplex, updateComplex,
+  uploadPhotos, deletePhoto,
+  getAdminComplexes, approveComplex, rejectComplex, suspendComplex,
 };
