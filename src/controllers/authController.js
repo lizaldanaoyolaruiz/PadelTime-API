@@ -18,7 +18,14 @@ const formatUser = (user) => ({
 // POST /api/auth/register
 const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, firstName, lastName, nombre, apellido, email, password, role } = req.body;
+
+    const resolvedName = name
+      || (firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName)
+      || (nombre && apellido ? `${nombre} ${apellido}` : nombre || apellido);
+    if (!resolvedName || resolvedName.trim().length < 2) {
+      return res.status(400).json({ message: 'Name is required (min 2 characters).' });
+    }
 
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: 'Email already registered.' });
@@ -26,7 +33,7 @@ const register = async (req, res) => {
     const allowedRoles = ['player', 'admin'];
     const assignedRole = allowedRoles.includes(role) ? role : 'player';
 
-    const userData = { name, email, password, role: assignedRole };
+    const userData = { name: resolvedName.trim(), email, password, role: assignedRole };
 
     if (assignedRole === 'player') {
       const token = crypto.randomBytes(32).toString('hex');
