@@ -1,26 +1,24 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-export const proteger = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ mensaje: 'No autorizado. Token requerido.' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
+const protect = async (req, res, next) => {
   try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Unauthorized. Token required.' });
+    }
+
+    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id);
-    if (!user) return res.status(401).json({ message: 'Token inválido o expirado' });
+    if (!user) return res.status(401).json({ message: 'User not found.' });
 
     req.user = user;
     next();
   } catch {
-    return res.status(401).json({ message: 'Token inválido o expirado' });
+    return res.status(401).json({ message: 'Invalid or expired token.' });
   }
 };
 
-export const authenticate = proteger;
+module.exports = { protect };
