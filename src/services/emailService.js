@@ -31,3 +31,25 @@ export const sendRejectionEmail = async (complejo, reason) => {
     `[email simulado] Rechazo → ${ownerEmail} | Hola ${ownerNombre}, tu complejo "${complejo.name}" fue rechazado. Motivo: ${reason}`
   );
 };
+
+export const enviarConfirmacionReserva = async (jugador, reserva) => {
+  const nombre = `${jugador.nombre || ''} ${jugador.apellido || ''}`.trim() || 'jugador';
+  console.log(
+    `[email simulado] Reserva confirmada → ${jugador.email} | Hola ${nombre}, tu reserva en "${reserva.cancha?.nombre}" el ${reserva.fecha?.toLocaleDateString('es-AR')} de ${reserva.horaInicio} a ${reserva.horaFin} fue CONFIRMADA.`
+  );
+};
+
+export const enviarRechazoReserva = async (jugador, reserva) => {
+  const nombre = `${jugador.nombre || ''} ${jugador.apellido || ''}`.trim() || 'jugador';
+  const nota = reserva.notaOwner ? ` Motivo: ${reserva.notaOwner}` : '';
+  console.log(
+    `[email simulado] Reserva rechazada → ${jugador.email} | Hola ${nombre}, tu reserva en "${reserva.cancha?.nombre}" el ${reserva.fecha?.toLocaleDateString('es-AR')} de ${reserva.horaInicio} a ${reserva.horaFin} fue RECHAZADA.${nota}`
+  );
+};
+
+export const enviarCancelacionReserva = async (jugador, reserva) => {
+  const nombre = `${jugador.nombre || ''} ${jugador.apellido || ''}`.trim() || 'jugador';
+  console.log(
+    `[email simulado] Reserva cancelada → ${jugador.email} | Hola ${nombre}, tu reserva en "${reserva.cancha?.nombre}" el ${reserva.fecha?.toLocaleDateString('es-AR')} de ${reserva.horaInicio} a ${reserva.horaFin} fue CANCELADA.`
+  );
+};
