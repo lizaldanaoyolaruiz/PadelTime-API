@@ -21,7 +21,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/complejos', complejosRoutes);
 app.use('/api/complexes', complejosRoutes);
-app.use('/api/canchas', canchasRoutes);
+app.use('/api/courts', canchasRoutes);
 app.use('/api/reservas', reservasRoutes);
 
 app.use((req, res) => {
