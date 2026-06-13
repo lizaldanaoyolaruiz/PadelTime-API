@@ -1,0 +1,21 @@
+const express = require('express');
+
+const authRoutes = require('./authRoutes');
+const complexRoutes = require('./complexRoutes');
+const courtRoutes = require('./courtRoutes');
+const bookingRoutes = require('./bookingRoutes');
+const adminRoutes = require('./adminRoutes');
+
+const router = express.Router();
+
+router.get('/health', (req, res) => {
+  res.json({ status: 'PadelTime API running' });
+});
+
+router.use('/auth', authRoutes);
+router.use('/complexes', complexRoutes);
+router.use('/courts', courtRoutes);
+router.use('/bookings', bookingRoutes);
+router.use('/admin', adminRoutes);
+
+module.exports = router;
