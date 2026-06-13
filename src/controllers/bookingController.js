@@ -1,13 +1,15 @@
 // TODO: implement booking logic
 
-export const createBooking = async (req, res) => {
+const createBooking = async (req, res) => {
   res.status(501).json({ message: 'Not implemented yet.' });
 };
 
-export const getBookings = async (req, res) => {
+const getBookings = async (req, res) => {
   res.status(501).json({ message: 'Not implemented yet.' });
 };
 
-export const cancelBooking = async (req, res) => {
+const cancelBooking = async (req, res) => {
   res.status(501).json({ message: 'Not implemented yet.' });
 };
+
+module.exports = { createBooking, getBookings, cancelBooking };
