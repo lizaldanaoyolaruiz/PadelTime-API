@@ -7,7 +7,9 @@ const validate = require('../middlewares/validateMiddleware');
 const router = express.Router();
 
 const registerRules = [
-  body('name').trim().isLength({ min: 3, max: 50 }).withMessage('Name must be 3–50 characters.'),
+  body('name').optional().trim().isLength({ min: 2, max: 50 }).withMessage('Name must be 2–50 characters.'),
+  body('firstName').optional().trim().isLength({ min: 2, max: 50 }).withMessage('First name must be 2–50 characters.'),
+  body('lastName').optional().trim().isLength({ min: 2, max: 50 }).withMessage('Last name must be 2–50 characters.'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required.'),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters.'),
   body('role').optional().isIn(['player', 'admin']).withMessage('Role must be player or admin.'),
