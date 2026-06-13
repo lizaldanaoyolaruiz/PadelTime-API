@@ -1,8 +1,6 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const { Schema } = mongoose;
-
-const daySchema = new Schema(
+const daySchema = new mongoose.Schema(
   {
     enabled: { type: Boolean, default: true },
     start: { type: String, default: '08:00' },
@@ -11,9 +9,9 @@ const daySchema = new Schema(
   { _id: false }
 );
 
-const courtSchema = new Schema(
+const courtSchema = new mongoose.Schema(
   {
-    complex: { type: Schema.Types.ObjectId, ref: 'Complex', required: true },
+    complex: { type: mongoose.Schema.Types.ObjectId, ref: 'Complex', required: true },
     name: { type: String, required: true, trim: true },
     type: { type: String, enum: ['crystal', 'panoramic'], required: true },
     description: { type: String, trim: true },
@@ -34,4 +32,4 @@ const courtSchema = new Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('Court', courtSchema);
+module.exports = mongoose.model('Court', courtSchema);
