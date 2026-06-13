@@ -1,73 +1,118 @@
-import User from '../models/User.js';
-import generateToken from '../utils/generateToken.js';
-import { enviarBienvenida } from '../services/emailService.js';
+const crypto = require('crypto');
+const User = require('../models/User');
+const generateToken = require('../utils/generateToken');
+const {
+  sendVerificationEmail,
+  sendPendingApprovalEmail,
+} = require('../services/emailService');
 
-const formatearUsuario = (user) => ({
+const formatUser = (user) => ({
   id: user._id,
-  nombre: user.nombre,
-  apellido: user.apellido || '',
+  name: user.name,
   email: user.email,
   role: user.role,
+  status: user.status,
+  isVerified: user.isVerified,
 });
 
 // POST /api/auth/register
-export const register = async (req, res) => {
+const register = async (req, res) => {
   try {
-    const { nombre, email, password, confirmPassword, role } = req.body;
+    const { name, email, password, role } = req.body;
 
-    if (!nombre || !email || !password) {
-      return res.status(400).json({ mensaje: 'Nombre, email y contraseña son obligatorios.' });
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).json({ message: 'Email already registered.' });
+
+    const allowedRoles = ['player', 'admin'];
+    const assignedRole = allowedRoles.includes(role) ? role : 'player';
+
+    const userData = { name, email, password, role: assignedRole };
+
+    if (assignedRole === 'player') {
+      const token = crypto.randomBytes(32).toString('hex');
+      userData.verificationToken = token;
+      userData.isVerified = false;
+      userData.status = 'approved';
+
+      const user = await User.create(userData);
+      sendVerificationEmail(user, token).catch((err) =>
+        console.error('[email] Verification error:', err.message)
+      );
+
+      return res.status(201).json({
+        message: 'Account created. Please verify your email before logging in.',
+      });
     }
 
-    if (password !== confirmPassword) {
-      return res.status(400).json({ mensaje: 'Las contraseñas no coinciden.' });
-    }
+    // admin: starts as pending, no email verification needed
+    userData.isVerified = true;
+    userData.status = 'pending';
 
-    const existe = await User.findOne({ email });
-    if (existe) return res.status(400).json({ mensaje: 'El email ya está registrado.' });
-
-    // Solo se puede auto-registrar como owner o player; admin solo vía consola
-    const rolPermitido = ['owner', 'player'].includes(role) ? role : 'player';
-
-    const user = await User.create({ nombre, email, password, role: rolPermitido });
-
-    const token = generateToken(user);
-
-    // Email de bienvenida — no bloqueamos la respuesta si falla
-    enviarBienvenida({ nombre: user.nombre, email: user.email, role: user.role }).catch((err) =>
-      console.error('[emailService] Error al enviar bienvenida:', err.message)
+    const user = await User.create(userData);
+    sendPendingApprovalEmail(user).catch((err) =>
+      console.error('[email] Pending approval error:', err.message)
     );
 
-    res.status(201).json({ token, user: formatearUsuario(user) });
+    res.status(201).json({
+      message: 'Admin account created. Awaiting superadmin approval.',
+    });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al registrar usuario.', error: error.message });
+    res.status(500).json({ message: 'Error registering user.', error: error.message });
+  }
+};
+
+// GET /api/auth/verify-email?token=...
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ message: 'Token is required.' });
+
+    const user = await User.findOne({ verificationToken: token }).select('+verificationToken');
+    if (!user) return res.status(400).json({ message: 'Invalid or expired token.' });
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    res.json({ message: 'Email verified successfully. You can now log in.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error verifying email.', error: error.message });
   }
 };
 
 // POST /api/auth/login
-export const login = async (req, res) => {
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ mensaje: 'Email y contraseña son obligatorios.' });
+    const user = await User.findOne({ email }).select('+password');
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
-    // select('+password') porque el campo tiene select: false en el schema
-    const user = await User.findOne({ email }).select('+password');
-    if (!user || !(await user.compararPassword(password))) {
-      return res.status(401).json({ mensaje: 'Credenciales incorrectas.' });
+    if (user.role === 'player' && !user.isVerified) {
+      return res.status(403).json({ message: 'Please verify your email before logging in.' });
+    }
+
+    if (user.role === 'admin' && user.status !== 'approved') {
+      return res.status(403).json({
+        message:
+          user.status === 'pending'
+            ? 'Your account is pending superadmin approval.'
+            : 'Your account has been rejected.',
+      });
     }
 
     const token = generateToken(user);
-
-    res.json({ token, user: formatearUsuario(user) });
+    res.json({ token, user: formatUser(user) });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al iniciar sesión.', error: error.message });
+    res.status(500).json({ message: 'Error logging in.', error: error.message });
   }
 };
 
-// GET /api/auth/me  (requiere token)
-export const getMe = async (req, res) => {
-  res.json({ user: formatearUsuario(req.user) });
+// GET /api/auth/me
+const getMe = async (req, res) => {
+  res.json({ user: formatUser(req.user) });
 };
+
+module.exports = { register, verifyEmail, login, getMe };
