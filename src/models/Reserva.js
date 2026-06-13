@@ -6,7 +6,13 @@ const reservaSchema = new Schema(
   {
     cancha: { type: Schema.Types.ObjectId, ref: 'Cancha', required: true },
     complejo: { type: Schema.Types.ObjectId, ref: 'Complejo', required: true },
-    jugador: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    jugador: { type: Schema.Types.ObjectId, ref: 'User' },
+    jugadorInfo: {
+      nombre:    { type: String, trim: true },
+      apellido:  { type: String, trim: true },
+      email:     { type: String, trim: true, lowercase: true },
+      telefono:  { type: String, trim: true },
+    },
     fecha: { type: Date, required: true },
     horaInicio: { type: String, required: true },
     horaFin: { type: String, required: true },
@@ -17,7 +23,8 @@ const reservaSchema = new Schema(
       enum: ['pendiente', 'confirmada', 'rechazada', 'cancelada', 'completada'],
       default: 'pendiente',
     },
-    notaOwner: { type: String, trim: true },
+    notaOwner:     { type: String, trim: true },
+    observaciones: { type: String, trim: true },
     pagoId: { type: String },
   },
   { timestamps: true }
