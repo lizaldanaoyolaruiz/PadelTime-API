@@ -3,6 +3,7 @@ import {
   getReservasOwner,
   getReservasJugador,
   crearReserva,
+  crearReservaOwner,
   confirmarReserva,
   rechazarReserva,
   cancelarReserva,
@@ -17,6 +18,9 @@ router.get('/owner', proteger, soloOwner, getReservasOwner);
 
 // Jugador: ver sus propias reservas
 router.get('/mis-reservas', proteger, soloPlayer, getReservasJugador);
+
+// Owner: crear una reserva manual
+router.post('/manual', proteger, soloOwner, crearReservaOwner);
 
 // Jugador: crear una reserva
 router.post('/', proteger, soloPlayer, crearReserva);
