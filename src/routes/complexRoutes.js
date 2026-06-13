@@ -1,26 +1,42 @@
-import { Router } from 'express';
-import {
-  createComplex, getMyComplex, updateComplex, uploadPhotos, deletePhoto,
-  getAdminComplexes, approveComplex, rejectComplex, suspendComplex, getActivityLog,
-} from '../controllers/complexController.js';
-import { proteger } from '../middlewares/authMiddleware.js';
-import { soloOwner, soloSuperAdmin } from '../middlewares/roleMiddleware.js';
-import upload from '../middlewares/uploadMiddleware.js';
+const express = require('express');
+const { body } = require('express-validator');
+const {
+  createComplex, getMyComplex, updateComplex,
+  uploadPhotos, deletePhoto,
+  getAdminComplexes, approveComplex, rejectComplex, suspendComplex,
+} = require('../controllers/complexController');
+const { protect } = require('../middlewares/authMiddleware');
+const { requireRole } = require('../middlewares/roleMiddleware');
+const { uploadMultiple } = require('../middlewares/uploadMiddleware');
+const validate = require('../middlewares/validateMiddleware');
 
-const router = Router();
+const router = express.Router();
 
-// Owner routes
-router.get('/me',           proteger, soloOwner,      getMyComplex);
-router.post('/',            proteger, soloOwner,      createComplex);
-router.put('/:id',          proteger, soloOwner,      updateComplex);
-router.post('/:id/photos',  proteger, soloOwner,      upload.array('photos', 10), uploadPhotos);
-router.delete('/:id/photos',proteger, soloOwner,      deletePhoto);
+const complexRules = [
+  body('name').trim().notEmpty().withMessage('Name is required.'),
+  body('location').trim().notEmpty().withMessage('Location is required.'),
+  body('city').trim().notEmpty().withMessage('City is required.'),
+  body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number.'),
+  body('openTime').matches(/^\d{2}:\d{2}$/).withMessage('openTime must be HH:MM.'),
+  body('closeTime').matches(/^\d{2}:\d{2}$/).withMessage('closeTime must be HH:MM.'),
+  body('depositPercentage').optional().isIn([20, 30, 50]).withMessage('Deposit must be 20, 30, or 50.'),
+];
 
-// Super Admin routes
-router.get('/admin',            proteger, soloSuperAdmin, getAdminComplexes);
-router.get('/activity',         proteger, soloSuperAdmin, getActivityLog);
-router.patch('/:id/approve',    proteger, soloSuperAdmin, approveComplex);
-router.patch('/:id/reject',     proteger, soloSuperAdmin, rejectComplex);
-router.patch('/:id/suspend',    proteger, soloSuperAdmin, suspendComplex);
+// Admin (owner) routes
+router.post('/', protect, requireRole('admin'), complexRules, validate, createComplex);
+router.get('/me', protect, requireRole('admin'), getMyComplex);
+router.put('/:id', protect, requireRole('admin', 'superadmin'), complexRules, validate, updateComplex);
+router.post('/:id/photos', protect, requireRole('admin', 'superadmin'), uploadMultiple, uploadPhotos);
+router.delete('/:id/photos', protect, requireRole('admin', 'superadmin'), deletePhoto);
 
-export default router;
+// Superadmin routes
+router.get('/admin', protect, requireRole('superadmin'), getAdminComplexes);
+router.patch('/:id/approve', protect, requireRole('superadmin'), approveComplex);
+router.patch('/:id/reject', protect, requireRole('superadmin'), [
+  body('reason').trim().notEmpty().withMessage('Rejection reason is required.'),
+], validate, rejectComplex);
+router.patch('/:id/suspend', protect, requireRole('superadmin'), [
+  body('reason').trim().notEmpty().withMessage('Suspension reason is required.'),
+], validate, suspendComplex);
+
+module.exports = router;
