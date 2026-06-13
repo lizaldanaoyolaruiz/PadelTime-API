@@ -1,7 +1,7 @@
-import { Readable } from 'stream';
-import cloudinary from '../config/cloudinary.js';
-import Court from '../models/Court.js';
-import Complex from '../models/Complex.js';
+const { Readable } = require('stream');
+const cloudinary = require('../config/cloudinary');
+const Court = require('../models/Court');
+const Complex = require('../models/Complex');
 
 const uploadImage = (buffer, folder) =>
   new Promise((resolve, reject) => {
@@ -15,18 +15,14 @@ const uploadImage = (buffer, folder) =>
 const getComplexIfOwner = async (complexId, userId, role) => {
   const complex = await Complex.findById(complexId);
   if (!complex) return null;
-  if (complex.owner.toString() !== userId.toString() && role !== 'SUPER_ADMIN') return null;
+  if (complex.owner.toString() !== userId.toString() && role !== 'superadmin') return null;
   return complex;
 };
 
 // POST /api/courts
-export const createCourt = async (req, res) => {
+const createCourt = async (req, res) => {
   try {
     const { complexId, name, type, description, features, pricePerHour, schedule } = req.body;
-
-    if (!complexId || !name || !type || !pricePerHour) {
-      return res.status(400).json({ message: 'complexId, name, type and pricePerHour are required.' });
-    }
 
     const complex = await getComplexIfOwner(complexId, req.user._id, req.user.role);
     if (!complex) return res.status(403).json({ message: 'Not authorized to add courts to this complex.' });
@@ -38,10 +34,8 @@ export const createCourt = async (req, res) => {
     }
 
     const court = await Court.create({
-      complex: complexId,
-      name, type, description,
-      features: features || [],
-      pricePerHour, photo, schedule,
+      complex: complexId, name, type, description,
+      features: features || [], pricePerHour, photo, schedule,
     });
 
     res.status(201).json({ court });
@@ -50,14 +44,14 @@ export const createCourt = async (req, res) => {
   }
 };
 
-// GET /api/courts?complexId=...  (owner panel — includes disabled)
-export const getCourtsByComplex = async (req, res) => {
+// GET /api/courts?complexId=...
+const getCourtsByComplex = async (req, res) => {
   try {
     const { complexId } = req.query;
     if (!complexId) return res.status(400).json({ message: 'complexId is required.' });
 
     const complex = await getComplexIfOwner(complexId, req.user._id, req.user.role);
-    if (!complex) return res.status(403).json({ message: 'Not authorized to view these courts.' });
+    if (!complex) return res.status(403).json({ message: 'Not authorized.' });
 
     const courts = await Court.find({ complex: complexId }).sort({ createdAt: 1 });
     res.json({ courts });
@@ -67,7 +61,7 @@ export const getCourtsByComplex = async (req, res) => {
 };
 
 // PUT /api/courts/:id
-export const updateCourt = async (req, res) => {
+const updateCourt = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
     if (!court) return res.status(404).json({ message: 'Court not found.' });
@@ -91,7 +85,7 @@ export const updateCourt = async (req, res) => {
 };
 
 // DELETE /api/courts/:id
-export const deleteCourt = async (req, res) => {
+const deleteCourt = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
     if (!court) return res.status(404).json({ message: 'Court not found.' });
@@ -106,8 +100,8 @@ export const deleteCourt = async (req, res) => {
   }
 };
 
-// GET /api/courts/public?complexId=...  (no auth — public portal)
-export const getPublicCourts = async (req, res) => {
+// GET /api/courts/public?complexId=...  (no auth)
+const getPublicCourts = async (req, res) => {
   try {
     const { complexId } = req.query;
     if (!complexId) return res.status(400).json({ message: 'complexId is required.' });
@@ -118,3 +112,5 @@ export const getPublicCourts = async (req, res) => {
     res.status(500).json({ message: 'Error fetching courts.', error: error.message });
   }
 };
+
+module.exports = { createCourt, getCourtsByComplex, updateCourt, deleteCourt, getPublicCourts };
