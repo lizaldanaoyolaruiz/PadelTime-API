@@ -53,6 +53,63 @@ export const getReservasJugador = async (req, res) => {
   }
 };
 
+// Owner: crear una reserva manual (sin usuario registrado)
+export const crearReservaOwner = async (req, res) => {
+  try {
+    const { canchaId, fecha, horaInicio, jugadorNombre, jugadorApellido, jugadorEmail, jugadorTelefono, observaciones } = req.body;
+
+    if (!canchaId || !fecha || !horaInicio || !jugadorNombre || !jugadorEmail) {
+      return res.status(400).json({ mensaje: 'canchaId, fecha, horaInicio, jugadorNombre y jugadorEmail son obligatorios.' });
+    }
+
+    const complejo = await Complejo.findOne({ owner: req.user._id });
+    if (!complejo) return res.status(404).json({ mensaje: 'No tenés un complejo registrado.' });
+
+    const cancha = await Cancha.findById(canchaId);
+    if (!cancha) return res.status(404).json({ mensaje: 'Cancha no encontrada.' });
+    if (String(cancha.complejo) !== String(complejo._id)) {
+      return res.status(403).json({ mensaje: 'La cancha no pertenece a tu complejo.' });
+    }
+    if (!cancha.habilitada) return res.status(400).json({ mensaje: 'La cancha no está disponible.' });
+
+    // Calcular horaFin sumando 90 minutos
+    const [h, m] = horaInicio.split(':').map(Number);
+    const finTotal = h * 60 + m + 90;
+    const horaFin = `${String(Math.floor(finTotal / 60)).padStart(2, '0')}:${String(finTotal % 60).padStart(2, '0')}`;
+
+    const fechaReserva = new Date(fecha);
+    fechaReserva.setUTCHours(12, 0, 0, 0);
+
+    const conflicto = await Reserva.findOne({
+      cancha: canchaId,
+      fecha: fechaReserva,
+      horaInicio,
+      estado: { $nin: ['rechazada', 'cancelada'] },
+    });
+    if (conflicto) return res.status(400).json({ mensaje: 'Ese turno ya está reservado.' });
+
+    const montoTotal = cancha.precio_por_hora * 1.5;
+
+    const reserva = await Reserva.create({
+      cancha: canchaId,
+      complejo: complejo._id,
+      jugadorInfo: { nombre: jugadorNombre, apellido: jugadorApellido, email: jugadorEmail, telefono: jugadorTelefono },
+      fecha: fechaReserva,
+      horaInicio,
+      horaFin,
+      montoTotal,
+      observaciones,
+    });
+
+    await reserva.populate('cancha', 'nombre tipo');
+
+    res.status(201).json({ mensaje: 'Reserva creada.', reserva });
+  } catch (err) {
+    if (err.code === 11000) return res.status(400).json({ mensaje: 'Ese turno ya está reservado.' });
+    res.status(500).json({ mensaje: 'Error al crear la reserva.', error: err.message });
+  }
+};
+
 // Jugador: crear una reserva
 export const crearReserva = async (req, res) => {
   try {
