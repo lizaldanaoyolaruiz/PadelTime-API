@@ -1,11 +1,28 @@
-import { Router } from 'express';
-import { register, login, getMe } from '../controllers/authController.js';
-import { proteger } from '../middlewares/authMiddleware.js';
+const express = require('express');
+const { body } = require('express-validator');
+const { register, verifyEmail, login, getMe } = require('../controllers/authController');
+const { protect } = require('../middlewares/authMiddleware');
+const validate = require('../middlewares/validateMiddleware');
 
-const router = Router();
+const router = express.Router();
 
-router.post('/register', register);
-router.post('/login', login);
-router.get('/me', proteger, getMe);
+const registerRules = [
+  body('name').optional().trim().isLength({ min: 2, max: 50 }).withMessage('Name must be 2–50 characters.'),
+  body('firstName').optional().trim().isLength({ min: 2, max: 50 }).withMessage('First name must be 2–50 characters.'),
+  body('lastName').optional().trim().isLength({ min: 2, max: 50 }).withMessage('Last name must be 2–50 characters.'),
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required.'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters.'),
+  body('role').optional().isIn(['player', 'admin']).withMessage('Role must be player or admin.'),
+];
 
-export default router;
+const loginRules = [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required.'),
+  body('password').notEmpty().withMessage('Password is required.'),
+];
+
+router.post('/register', registerRules, validate, register);
+router.get('/verify-email', verifyEmail);
+router.post('/login', loginRules, validate, login);
+router.get('/me', protect, getMe);
+
+module.exports = router;
