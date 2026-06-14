@@ -1,9 +1,9 @@
-import OpenAI from 'openai';
-import Complejo from '../models/Complejo.js';
-import { generarSystemPrompt } from '../config/chatbotPrompt.js';
+const OpenAI = require('openai');
+const Complex = require('../models/Complex');
+const { generarSystemPrompt } = require('../config/chatbotPrompt');
 
-export const chatbot = async (req, res) => {
-  const xai = new OpenAI({
+const chatbot = async (req, res) => {
+  const groq = new OpenAI({
     apiKey: process.env.GROQ_API_KEY,
     baseURL: 'https://api.groq.com/openai/v1',
   });
@@ -14,9 +14,8 @@ export const chatbot = async (req, res) => {
       return res.status(400).json({ error: 'El mensaje no puede estar vacío.' });
     }
 
-    // Obtener complejos aprobados de la DB para dar contexto real al bot
-    const complejos = await Complejo.find({ status: { $in: ['approved', 'pending'] } })
-      .select('name city location price openTime closeTime courts whatsapp instagram porcentaje_sena mercadopago_activo')
+    const complejos = await Complex.find({ status: { $in: ['approved', 'pending'] } })
+      .select('name city location price openTime closeTime whatsapp instagram mercadopagoActive depositPercentage')
       .limit(20)
       .lean();
 
@@ -24,8 +23,8 @@ export const chatbot = async (req, res) => {
       ? complejos.map(c => {
           const lineas = [
             `📍 ${c.name} — ${c.city}${c.location ? `, ${c.location}` : ''}`,
-            `   💰 Precio: $${c.price}/hora | Horario: ${c.openTime} a ${c.closeTime} | Canchas: ${c.courts}`,
-            `   💳 Mercado Pago: ${c.mercadopago_activo ? `Activo (seña ${c.porcentaje_sena}%)` : 'No disponible'}`,
+            `   💰 Precio: $${c.price}/hora | Horario: ${c.openTime} a ${c.closeTime}`,
+            `   💳 Mercado Pago: ${c.mercadopagoActive ? `Activo (seña ${c.depositPercentage}%)` : 'No disponible'}`,
           ];
           if (c.whatsapp) lineas.push(`   📱 WhatsApp: ${c.whatsapp}`);
           if (c.instagram) lineas.push(`   📸 Instagram: ${c.instagram}`);
@@ -47,7 +46,7 @@ export const chatbot = async (req, res) => {
       { role: 'user', content: message },
     ];
 
-    const response = await xai.chat.completions.create({
+    const response = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages,
       max_tokens: 350,
@@ -65,3 +64,5 @@ export const chatbot = async (req, res) => {
     });
   }
 };
+
+module.exports = { chatbot };
