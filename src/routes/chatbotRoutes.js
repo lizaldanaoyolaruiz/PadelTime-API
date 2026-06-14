@@ -1,9 +1,8 @@
-import { Router } from 'express';
-import { chatbot } from '../controllers/chatbotController.js';
+const { Router } = require('express');
+const { chatbot } = require('../controllers/chatbotController');
 
 const router = Router();
 
-// Público — no requiere login
 router.post('/', chatbot);
 
-export default router;
+module.exports = router;

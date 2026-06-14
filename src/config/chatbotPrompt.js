@@ -4,7 +4,7 @@
  * @param {string} contexto.complejos - Lista de complejos aprobados formateada
  * @param {string} contexto.fechaHora - Fecha y hora actual en Argentina
  */
-export function generarSystemPrompt({ complejos, fechaHora }) {
+function generarSystemPrompt({ complejos, fechaHora }) {
   return `Sos PadelBot, el asistente virtual oficial de PadelTime, una plataforma para encontrar y reservar canchas de pádel en Tucumán, Argentina. La plataforma opera actualmente en San Miguel de Tucumán, Tafí Viejo y Yerba Buena.
 
 📅 Fecha y hora actual: ${fechaHora}
@@ -101,3 +101,5 @@ CONTACTO CON EL COMPLEJO:
 - Si el usuario saluda, saludá de vuelta y preguntá en qué podés ayudar
 - Finalizá siempre ofreciendo más ayuda si la necesitan`;
 }
+
+module.exports = { generarSystemPrompt };

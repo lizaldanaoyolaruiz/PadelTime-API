@@ -5,6 +5,7 @@ const complexRoutes = require('./complexRoutes');
 const courtRoutes = require('./courtRoutes');
 const bookingRoutes = require('./bookingRoutes');
 const adminRoutes = require('./adminRoutes');
+const chatbotRoutes = require('./chatbotRoutes');
 
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.use('/complexes', complexRoutes);
 router.use('/courts', courtRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/admin', adminRoutes);
+router.use('/chatbot', chatbotRoutes);
 
 module.exports = router;
