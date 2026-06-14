@@ -7,6 +7,7 @@ import authRoutes from './src/routes/authRoutes.js';
 import complejosRoutes from './src/routes/complejosRoutes.js';
 import canchasRoutes from './src/routes/canchasRoutes.js';
 import reservasRoutes from './src/routes/reservasRoutes.js';
+import chatbotRoutes from './src/routes/chatbotRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,7 @@ app.use('/api/complejos', complejosRoutes);
 app.use('/api/complexes', complejosRoutes);
 app.use('/api/canchas', canchasRoutes);
 app.use('/api/reservas', reservasRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ mensaje: 'Ruta no encontrada.' });
