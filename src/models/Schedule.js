@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const scheduleSchema = new mongoose.Schema({
     complexId:{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'complex',
+        ref: 'complejo',
         require: true,
         unique: true
     },
