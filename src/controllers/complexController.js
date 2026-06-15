@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { Readable } = require('stream');
 const cloudinary = require('../config/cloudinary');
 const Complex = require('../models/Complex');
@@ -15,6 +16,36 @@ const uploadImage = (buffer, folder) =>
 
 const isOwner = (complex, userId) =>
   complex.owner.toString() === userId.toString();
+
+// GET /api/complexes/public
+const getPublicComplexes = async (req, res) => {
+  try {
+    const complexes = await Complex.find({ status: 'approved' })
+      .select('name location city price ratingAverage ratingCount photos image description openTime closeTime');
+
+    res.json({ complexes });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching complexes.', error: error.message });
+  }
+};
+
+// GET /api/complexes/public/:id
+const getPublicComplexById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: 'Complex not found.' });
+    }
+
+    const complex = await Complex.findOne({ _id: id, status: 'approved' });
+    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+
+    res.json({ complex });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching complex.', error: error.message });
+  }
+};
 
 // POST /api/complexes
 const createComplex = async (req, res) => {
@@ -246,6 +277,7 @@ const suspendComplex = async (req, res) => {
 };
 
 module.exports = {
+  getPublicComplexes, getPublicComplexById,
   createComplex, getMyComplex, updateComplex,
   uploadPhotos, deletePhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex,
