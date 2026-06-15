@@ -1,6 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const {
+  getPublicComplexes, getPublicComplexById,
   createComplex, getMyComplex, updateComplex,
   uploadPhotos, deletePhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex,
@@ -21,6 +22,10 @@ const complexRules = [
   body('closeTime').matches(/^\d{2}:\d{2}$/).withMessage('closeTime must be HH:MM.'),
   body('depositPercentage').optional().isIn([20, 30, 50]).withMessage('Deposit must be 20, 30, or 50.'),
 ];
+
+// Public routes
+router.get('/public', getPublicComplexes);
+router.get('/public/:id', getPublicComplexById);
 
 // Admin (owner) routes
 router.post('/', protect, requireRole('admin'), complexRules, validate, createComplex);
