@@ -16,6 +16,11 @@ const bookingSchema = new mongoose.Schema(
       default: 'pending',
     },
     paymentId: { type: String },
+    confirmationMethod: {
+      type: String,
+      enum: ['whatsapp', 'mercadopago'],
+      required: true,
+    },
   },
   { timestamps: true }
 );
