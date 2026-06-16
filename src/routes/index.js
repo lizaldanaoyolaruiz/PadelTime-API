@@ -8,7 +8,7 @@ const adminRoutes = require('./adminRoutes');
 const chatbotRoutes = require('./chatbotRoutes');
 const reviewRoutes = require('./reviewRoutes');
 const clubRoutes = require('./clubRoutes');
-
+const superAdminGestionRoutes = require('./superAdminGestionRoutes');
 const router = express.Router();
 
 router.get('/health', (req, res) => {
@@ -21,6 +21,7 @@ router.use('/courts', courtRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/admin', adminRoutes);
 router.use('/admin/clubs', clubRoutes);
+router.use('/superadmin', superAdminGestionRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/reports', reportRoutes);
