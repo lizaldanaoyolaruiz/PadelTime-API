@@ -19,6 +19,7 @@ const complexSchema = new mongoose.Schema(
     depositPercentage: { type: Number, enum: [20, 30, 50], default: 30 },
     ratingAverage: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
+    isFeatured: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected', 'suspended'],
