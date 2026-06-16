@@ -1,142 +1,133 @@
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import mongoose from 'mongoose';
-import User from '../models/User.js';
-import Complejo from '../models/Complejo.js';
-import ActivityLog from '../models/ActivityLog.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, '../../.env') });
+require('dotenv').config();
+const mongoose = require('mongoose');
+const User = require('../models/User');
+const Club = require('../models/Club');
+const ActivityLog = require('../models/ActivityLog');
 
 const seed = async () => {
-  if (!process.env.MONGO_URI) {
-    console.error('❌ MONGO_URI no está definida en .env');
+  if (!process.env.MONGODB_URI) {
+    console.error('MONGODB_URI no está definida en .env');
     process.exit(1);
   }
 
-  await mongoose.connect(process.env.MONGO_URI);
-  console.log('✅ MongoDB conectado para seed');
+  await mongoose.connect(process.env.MONGODB_URI);
+  console.log('MongoDB conectado para seed');
 
   await Promise.all([
     User.deleteMany({}),
-    Complejo.deleteMany({}),
+    Club.deleteMany({}),
     ActivityLog.deleteMany({}),
   ]);
-  console.log('🗑️  Colecciones limpiadas');
+  console.log('Colecciones limpiadas');
 
   const superAdmin = await User.create({
-    nombre: 'Super',
-    apellido: 'Admin',
+    name: 'Super Admin',
     email: 'superadmin@padeltime.com',
     password: 'Admin1234!',
-    role: 'SUPER_ADMIN',
+    role: 'superadmin',
+    status: 'approved',
+    isVerified: true,
   });
 
-  const owner = await User.create({
-    nombre: 'Carlos',
-    apellido: 'Rodríguez',
-    email: 'owner@padeltime.com',
-    password: 'Owner1234!',
-    role: 'owner',
-  });
-
-  const complejos = await Complejo.insertMany([
+  const clubs = await Club.insertMany([
     {
-      owner: owner._id,
       name: 'Pista Sur Padel',
-      location: 'Av. San Martín 1234',
+      owner: 'Carlos Rodríguez',
+      email: 'carlos@pistasur.com',
+      phone: '+54 11 1234 5678',
       city: 'Buenos Aires',
+      province: 'Buenos Aires',
+      address: 'Av. San Martín 1234',
       courts: 4,
-      price: 25000,
-      openTime: '08:00',
-      closeTime: '22:00',
-      status: 'pending',
+      status: 'PENDING',
+      registeredAt: '2026-06-01',
     },
     {
-      owner: owner._id,
       name: 'Centro Padel Norte',
-      location: 'Ruta 9 km 40',
+      owner: 'María López',
+      email: 'maria@centronorte.com',
+      phone: '+54 341 456 7890',
       city: 'Rosario',
+      province: 'Santa Fe',
+      address: 'Ruta 9 km 40',
       courts: 2,
-      price: 20000,
-      openTime: '07:00',
-      closeTime: '23:00',
-      status: 'pending',
+      status: 'PENDING',
+      registeredAt: '2026-06-03',
     },
     {
-      owner: owner._id,
       name: 'MARCOS PAZ PADEL',
-      location: 'Av. Libertad 500',
+      owner: 'José García',
+      email: 'jose@marcospazpadel.com',
+      phone: '+54 220 789 0123',
       city: 'Marcos Paz',
+      province: 'Buenos Aires',
+      address: 'Av. Libertad 500',
       courts: 6,
-      price: 30000,
-      openTime: '07:00',
-      closeTime: '23:30',
-      status: 'approved',
+      status: 'APPROVED',
+      registeredAt: '2026-05-20',
     },
     {
-      owner: owner._id,
       name: 'Complejo Las Palmas',
-      location: 'Belgrano 789',
+      owner: 'Ana Fernández',
+      email: 'ana@laspalmas.com',
+      phone: '+54 351 321 6547',
       city: 'Córdoba',
+      province: 'Córdoba',
+      address: 'Belgrano 789',
       courts: 3,
-      price: 22000,
-      openTime: '08:00',
-      closeTime: '22:00',
-      status: 'rejected',
-      rejectReason: 'Documentación incompleta',
+      status: 'REJECTED',
+      observations: 'Documentación incompleta',
+      registeredAt: '2026-05-15',
     },
     {
-      owner: owner._id,
       name: 'Padel Park Tucumán',
-      location: 'San Lorenzo 456',
-      city: 'San Miguel De Tucumán',
+      owner: 'Luis Torres',
+      email: 'luis@padelparktucu.com',
+      phone: '+54 381 654 3210',
+      city: 'San Miguel de Tucumán',
+      province: 'Tucumán',
+      address: 'San Lorenzo 456',
       courts: 5,
-      price: 18000,
-      openTime: '08:00',
-      closeTime: '23:00',
-      status: 'suspended',
-      rejectReason: 'Incumplimiento de normativas',
+      status: 'SUSPENDED',
+      observations: 'Incumplimiento de normativas',
+      registeredAt: '2026-05-10',
     },
   ]);
 
   await ActivityLog.insertMany([
     {
       action: 'approved',
-      complexId: complejos[2]._id,
-      complexName: complejos[2].name,
+      complexId: clubs[2]._id,
+      complexName: clubs[2].name,
       adminId: superAdmin._id,
-      adminName: 'Super Admin',
-      reason: null,
+      adminName: superAdmin.name,
     },
     {
       action: 'rejected',
-      complexId: complejos[3]._id,
-      complexName: complejos[3].name,
+      complexId: clubs[3]._id,
+      complexName: clubs[3].name,
       adminId: superAdmin._id,
-      adminName: 'Super Admin',
+      adminName: superAdmin.name,
       reason: 'Documentación incompleta',
     },
     {
       action: 'suspended',
-      complexId: complejos[4]._id,
-      complexName: complejos[4].name,
+      complexId: clubs[4]._id,
+      complexName: clubs[4].name,
       adminId: superAdmin._id,
-      adminName: 'Super Admin',
+      adminName: superAdmin.name,
       reason: 'Incumplimiento de normativas',
     },
   ]);
 
-  console.log('\n✅ Seed completado:');
-  console.log('   SUPER_ADMIN → superadmin@padeltime.com / Admin1234!');
-  console.log('   Owner       → owner@padeltime.com / Owner1234!');
-  console.log(`   Complejos   → ${complejos.length} (2 pending, 1 approved, 1 rejected, 1 suspended)`);
+  console.log('Seed completado:');
+  console.log('  superadmin@padeltime.com / Admin1234!');
+  console.log(`  ${clubs.length} clubs insertados`);
 
   await mongoose.disconnect();
 };
 
 seed().catch((err) => {
-  console.error('❌ Error en seed:', err.message);
+  console.error('Error en seed:', err.message);
   process.exit(1);
 });
