@@ -1,10 +1,12 @@
 const express = require('express');
 const { body } = require('express-validator');
 const {
+  getFeaturedComplexes,
   getPublicComplexes, getPublicComplexById,
   createComplex, getMyComplex, updateComplex,
   uploadPhotos, deletePhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex,
+  toggleFeatured,
 } = require('../controllers/complexController');
 const { protect } = require('../middlewares/authMiddleware');
 const { requireRole } = require('../middlewares/roleMiddleware');
@@ -24,6 +26,7 @@ const complexRules = [
 ];
 
 // Public routes
+router.get('/', getFeaturedComplexes);
 router.get('/public', getPublicComplexes);
 router.get('/public/:id', getPublicComplexById);
 
@@ -36,6 +39,7 @@ router.delete('/:id/photos', protect, requireRole('admin', 'superadmin'), delete
 
 // Superadmin routes
 router.get('/admin', protect, requireRole('superadmin'), getAdminComplexes);
+router.patch('/:id/featured', protect, requireRole('superadmin'), toggleFeatured);
 router.patch('/:id/approve', protect, requireRole('superadmin'), approveComplex);
 router.patch('/:id/reject', protect, requireRole('superadmin'), [
   body('reason').trim().notEmpty().withMessage('Rejection reason is required.'),
