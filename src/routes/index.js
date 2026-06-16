@@ -10,7 +10,6 @@ const reviewRoutes = require('./reviewRoutes');
 const clubRoutes = require('./clubRoutes');
 const superAdminGestionRoutes = require('./superAdminGestionRoutes');
 const reportRoutes = require('./reportRoutes');
-
 const router = express.Router();
 
 router.get('/health', (req, res) => {
