@@ -17,6 +17,33 @@ const uploadImage = (buffer, folder) =>
 const isOwner = (complex, userId) =>
   complex.owner.toString() === userId.toString();
 
+// GET /api/complexes?isFeatured=true
+const getFeaturedComplexes = async (req, res) => {
+  try {
+    const filter = { status: 'approved' };
+    if (req.query.isFeatured === 'true') filter.isFeatured = true;
+
+    const complexes = await Complex.find(filter)
+      .select('name location price ratingAverage image openTime closeTime')
+      .sort({ ratingAverage: -1 })
+      .limit(6);
+
+    const data = complexes.map((c) => ({
+      id: c._id,
+      name: c.name,
+      location: c.location,
+      price: c.price,
+      rating: c.ratingAverage,
+      image: c.image,
+      time: c.openTime && c.closeTime ? `${c.openTime} - ${c.closeTime}` : null,
+    }));
+
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching complexes.', error: error.message });
+  }
+};
+
 // GET /api/complexes/public
 const getPublicComplexes = async (req, res) => {
   try {
@@ -276,9 +303,26 @@ const suspendComplex = async (req, res) => {
   }
 };
 
+// PATCH /api/complexes/:id/featured  (superadmin)
+const toggleFeatured = async (req, res) => {
+  try {
+    const complex = await Complex.findById(req.params.id);
+    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+
+    complex.isFeatured = !complex.isFeatured;
+    await complex.save();
+
+    res.json({ isFeatured: complex.isFeatured });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+
 module.exports = {
+  getFeaturedComplexes,
   getPublicComplexes, getPublicComplexById,
   createComplex, getMyComplex, updateComplex,
   uploadPhotos, deletePhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex,
+  toggleFeatured,
 };
