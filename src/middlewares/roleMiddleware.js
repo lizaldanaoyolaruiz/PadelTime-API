@@ -5,4 +5,6 @@ const requireRole = (...roles) => (req, res, next) => {
   next();
 };
 
-module.exports = { requireRole };
+const roleMiddleware = (rolesArray) => requireRole(...rolesArray);
+
+module.exports = { requireRole, roleMiddleware };
