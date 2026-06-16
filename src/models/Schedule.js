@@ -22,4 +22,4 @@ const scheduleSchema = new mongoose.Schema({
     update: {type: mongoose.Schema.Type.ObjectId, ref: 'user'}
 },{timestamps: true});
 
-export default mongoose.model('schedule', scheduleSchema);
+export default mongoose.model('Schedule', scheduleSchema);
