@@ -23,5 +23,6 @@ router.use('/admin', adminRoutes);
 router.use('/admin/clubs', clubRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/reviews', reviewRoutes);
+router.use('/reports', reportRoutes);
 
 module.exports = router;
