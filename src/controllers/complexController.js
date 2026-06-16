@@ -318,11 +318,22 @@ const toggleFeatured = async (req, res) => {
   }
 };
 
+// DELETE /api/complexes/:id  (superadmin)
+const deleteComplex = async (req, res) => {
+  try {
+    const complex = await Complex.findByIdAndDelete(req.params.id);
+    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    res.json({ message: 'Complex deleted.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+
 module.exports = {
   getFeaturedComplexes,
   getPublicComplexes, getPublicComplexById,
   createComplex, getMyComplex, updateComplex,
   uploadPhotos, deletePhoto,
-  getAdminComplexes, approveComplex, rejectComplex, suspendComplex,
+  getAdminComplexes, approveComplex, rejectComplex, suspendComplex, deleteComplex,
   toggleFeatured,
 };
