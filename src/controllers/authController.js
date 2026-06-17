@@ -1,10 +1,7 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
-const {
-  sendVerificationEmail,
-  sendPendingApprovalEmail,
-} = require('../services/emailService');
+const { sendVerificationEmail } = require('../services/emailService');
 
 const formatUser = (user) => ({
   id: user._id,
@@ -51,18 +48,11 @@ const register = async (req, res) => {
       });
     }
 
-    // admin: starts as pending, no email verification needed
     userData.isVerified = true;
-    userData.status = 'pending';
-
     const user = await User.create(userData);
-    sendPendingApprovalEmail(user).catch((err) =>
-      console.error('[email] Pending approval error:', err.message)
-    );
+    const token = generateToken(user);
 
-    res.status(201).json({
-      message: 'Admin account created. Awaiting superadmin approval.',
-    });
+    res.status(201).json({ token, user: formatUser(user) });
   } catch (error) {
     res.status(500).json({ message: 'Error registering user.', error: error.message });
   }
@@ -99,15 +89,6 @@ const login = async (req, res) => {
 
     if (user.role === 'player' && !user.isVerified) {
       return res.status(403).json({ message: 'Please verify your email before logging in.' });
-    }
-
-    if (user.role === 'admin' && user.status !== 'approved') {
-      return res.status(403).json({
-        message:
-          user.status === 'pending'
-            ? 'Your account is pending superadmin approval.'
-            : 'Your account has been rejected.',
-      });
     }
 
     const token = generateToken(user);
