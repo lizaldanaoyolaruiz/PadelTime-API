@@ -22,7 +22,7 @@ const complexRules = [
   body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number.'),
   body('openTime').matches(/^\d{2}:\d{2}$/).withMessage('openTime must be HH:MM.'),
   body('closeTime').matches(/^\d{2}:\d{2}$/).withMessage('closeTime must be HH:MM.'),
-  body('depositPercentage').optional().isIn([20, 30, 50]).withMessage('Deposit must be 20, 30, or 50.'),
+  body('depositPercentage').optional().isFloat({ min: 0, max: 100 }).withMessage('Deposit must be between 0 and 100.'),
 ];
 
 const complexUpdateRules = [
@@ -32,7 +32,7 @@ const complexUpdateRules = [
   body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a positive number.'),
   body('openTime').optional().matches(/^\d{2}:\d{2}$/).withMessage('openTime must be HH:MM.'),
   body('closeTime').optional().matches(/^\d{2}:\d{2}$/).withMessage('closeTime must be HH:MM.'),
-  body('depositPercentage').optional().isIn([20, 30, 50]).withMessage('Deposit must be 20, 30, or 50.'),
+  body('depositPercentage').optional().isFloat({ min: 0, max: 100 }).withMessage('Deposit must be between 0 and 100.'),
 ];
 
 router.get('/', getFeaturedComplexes);
