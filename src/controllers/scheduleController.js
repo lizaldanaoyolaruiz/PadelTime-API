@@ -62,3 +62,8 @@ async function updateScheduleConfig(req, res) {
     }
     
 }
+
+export {
+    getSchedule,
+    updateScheduleConfig
+}
