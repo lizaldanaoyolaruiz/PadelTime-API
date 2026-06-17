@@ -1,10 +1,6 @@
-const requireRole = (...roles) => (req, res, next) => {
+export const requireRole = (...roles) => (req, res, next) => {
   if (!roles.includes(req.user.role)) {
     return res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
   }
   next();
 };
-
-const roleMiddleware = (rolesArray) => requireRole(...rolesArray);
-
-module.exports = { requireRole, roleMiddleware };
