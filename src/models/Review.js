@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema(
   {
@@ -12,7 +12,6 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Una valoración por usuario por complejo
 reviewSchema.index({ complex: 1, user: 1 }, { unique: true });
 
-module.exports = mongoose.model('Review', reviewSchema);
+export default mongoose.model('Review', reviewSchema);
