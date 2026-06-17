@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const Booking = require('../models/Booking');
-const Complex = require('../models/Complex');
-const { generateCsv, generatePdf } = require('../services/exportService');
+import mongoose from 'mongoose';
+import Booking from '../models/Booking.js';
+import Complex from '../models/Complex.js';
+import { generateCsv, generatePdf } from '../services/exportService.js';
 
 const buildDateRangeFilter = (startDate, endDate) => {
   const range = {};
@@ -14,8 +14,7 @@ const buildDateRangeFilter = (startDate, endDate) => {
   return range;
 };
 
-// GET/POST /api/reports/export
-const exportBookings = async (req, res) => {
+export const exportBookings = async (req, res) => {
   try {
     const params = { ...req.query, ...req.body };
     const { complexId, courtId, startDate, endDate, status, format } = params;
@@ -60,5 +59,3 @@ const exportBookings = async (req, res) => {
     res.status(500).json({ message: 'Error generating report.', error: error.message });
   }
 };
-
-module.exports = { exportBookings };
