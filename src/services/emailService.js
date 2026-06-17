@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 const from = `"PadelTime" <${process.env.SMTP_USER}>`;
 
-const sendVerificationEmail = async (user, token) => {
+export const sendVerificationEmail = async (user, token) => {
   const link = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
   await transporter.sendMail({
     from,
@@ -27,49 +27,29 @@ const sendVerificationEmail = async (user, token) => {
   });
 };
 
-const sendPendingApprovalEmail = async (user) => {
+export const sendApprovalEmail = async (user) => {
   await transporter.sendMail({
     from,
     to: user.email,
-    subject: 'Tu cuenta está pendiente de aprobación',
-    html: `
-      <h2>Hola, ${user.name}!</h2>
-      <p>Tu solicitud para registrar un complejo fue recibida.</p>
-      <p>Nuestro equipo revisará tu cuenta y recibirás una notificación cuando sea aprobada.</p>
-    `,
-  });
-};
-
-const sendApprovalEmail = async (user) => {
-  await transporter.sendMail({
-    from,
-    to: user.email,
-    subject: '¡Tu cuenta fue aprobada!',
+    subject: '¡Tu complejo fue aprobado!',
     html: `
       <h2>¡Felicitaciones, ${user.name}!</h2>
-      <p>Tu cuenta de administrador fue aprobada. Ya podés iniciar sesión y configurar tu complejo.</p>
-      <a href="${process.env.CLIENT_URL}/login">Iniciar sesión</a>
+      <p>Tu complejo fue aprobado. Ya está visible en la plataforma.</p>
+      <a href="${process.env.CLIENT_URL}/admin">Ir al panel</a>
     `,
   });
 };
 
-const sendRejectionEmail = async (user, reason) => {
+export const sendRejectionEmail = async (user, reason) => {
   await transporter.sendMail({
     from,
     to: user.email,
-    subject: 'Tu solicitud fue rechazada',
+    subject: 'Tu complejo fue rechazado',
     html: `
       <h2>Hola, ${user.name}</h2>
-      <p>Lamentablemente tu solicitud de administrador fue rechazada.</p>
+      <p>Lamentablemente tu complejo fue rechazado.</p>
       ${reason ? `<p><strong>Motivo:</strong> ${reason}</p>` : ''}
       <p>Si tenés dudas, contactanos.</p>
     `,
   });
-};
-
-module.exports = {
-  sendVerificationEmail,
-  sendPendingApprovalEmail,
-  sendApprovalEmail,
-  sendRejectionEmail,
 };

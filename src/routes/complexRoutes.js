@@ -1,19 +1,19 @@
-const express = require('express');
-const { body } = require('express-validator');
-const {
+import { Router } from 'express';
+import { body } from 'express-validator';
+import {
   getFeaturedComplexes,
   getPublicComplexes, getPublicComplexById,
   createComplex, getMyComplex, updateComplex,
   uploadPhotos, deletePhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex, deleteComplex,
   toggleFeatured,
-} = require('../controllers/complexController');
-const { protect } = require('../middlewares/authMiddleware');
-const { requireRole } = require('../middlewares/roleMiddleware');
-const { uploadMultiple } = require('../middlewares/uploadMiddleware');
-const validate = require('../middlewares/validateMiddleware');
+} from '../controllers/complexController.js';
+import { protect } from '../middlewares/authMiddleware.js';
+import { requireRole } from '../middlewares/roleMiddleware.js';
+import { uploadMultiple } from '../middlewares/uploadMiddleware.js';
+import validate from '../middlewares/validateMiddleware.js';
 
-const router = express.Router();
+const router = Router();
 
 const complexRules = [
   body('name').trim().notEmpty().withMessage('Name is required.'),
@@ -35,28 +35,21 @@ const complexUpdateRules = [
   body('depositPercentage').optional().isIn([20, 30, 50]).withMessage('Deposit must be 20, 30, or 50.'),
 ];
 
-// Public routes
 router.get('/', getFeaturedComplexes);
 router.get('/public', getPublicComplexes);
 router.get('/public/:id', getPublicComplexById);
 
-// Admin (owner) routes
 router.post('/', protect, requireRole('admin'), complexRules, validate, createComplex);
 router.get('/me', protect, requireRole('admin'), getMyComplex);
 router.put('/:id', protect, requireRole('admin', 'superadmin'), complexUpdateRules, validate, updateComplex);
 router.post('/:id/photos', protect, requireRole('admin', 'superadmin'), uploadMultiple, uploadPhotos);
 router.delete('/:id/photos', protect, requireRole('admin', 'superadmin'), deletePhoto);
 
-// Superadmin routes
 router.get('/admin', protect, requireRole('superadmin'), getAdminComplexes);
 router.delete('/:id', protect, requireRole('superadmin'), deleteComplex);
 router.patch('/:id/featured', protect, requireRole('superadmin'), toggleFeatured);
 router.patch('/:id/approve', protect, requireRole('superadmin'), approveComplex);
-router.patch('/:id/reject', protect, requireRole('superadmin'), [
-  body('reason').optional().trim(),
-], validate, rejectComplex);
-router.patch('/:id/suspend', protect, requireRole('superadmin'), [
-  body('reason').optional().trim(),
-], validate, suspendComplex);
+router.patch('/:id/reject', protect, requireRole('superadmin'), [body('reason').optional().trim()], validate, rejectComplex);
+router.patch('/:id/suspend', protect, requireRole('superadmin'), [body('reason').optional().trim()], validate, suspendComplex);
 
-module.exports = router;
+export default router;
