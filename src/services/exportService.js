@@ -39,8 +39,7 @@ const bookingToRow = (booking) => [
   booking.status,
 ];
 
-// Generates a CSV string (with UTF-8 BOM for Excel compatibility) from a list of bookings
-const generateCsv = (bookings) => {
+export const generateCsv = (bookings) => {
   const rows = [CSV_HEADERS, ...bookings.map(bookingToRow)];
   const csvBody = rows.map((row) => row.map(escapeCsvValue).join(',')).join('\r\n');
   return `﻿${csvBody}`;
@@ -82,7 +81,6 @@ const buildContentStream = (lines) => {
   return stream;
 };
 
-// Assembles a minimal valid PDF document (header, objects, xref table, trailer) from page object definitions
 const assemblePdf = (objects) => {
   const totalObjects = objects.length;
   const chunks = [Buffer.from('%PDF-1.4\n', 'latin1')];
@@ -150,8 +148,7 @@ const buildPdfDocument = (lines) => {
   return assemblePdf(objects);
 };
 
-// Generates a PDF buffer containing a tabular report of bookings
-const generatePdf = (bookings, filters = {}) => {
+export const generatePdf = (bookings, filters = {}) => {
   const lines = [];
   lines.push('PadelTime - Bookings Report');
   lines.push(`Generated: ${new Date().toISOString()}`);
@@ -171,5 +168,3 @@ const generatePdf = (bookings, filters = {}) => {
 
   return buildPdfDocument(lines);
 };
-
-module.exports = { generateCsv, generatePdf };

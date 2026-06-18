@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
-const { Readable } = require('stream');
-const cloudinary = require('../config/cloudinary');
-const Complex = require('../models/Complex');
-const ActivityLog = require('../models/ActivityLog');
-const { sendApprovalEmail, sendRejectionEmail } = require('../services/emailService');
+import { Readable } from 'stream';
+import mongoose from 'mongoose';
+import cloudinary from '../config/cloudinary.js';
+import Complex from '../models/Complex.js';
+import ActivityLog from '../models/ActivityLog.js';
+import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
 
 const uploadImage = (buffer, folder) =>
   new Promise((resolve, reject) => {
@@ -17,8 +17,7 @@ const uploadImage = (buffer, folder) =>
 const isOwner = (complex, userId) =>
   complex.owner.toString() === userId.toString();
 
-// GET /api/complexes?isFeatured=true
-const getFeaturedComplexes = async (req, res) => {
+export const getFeaturedComplexes = async (req, res) => {
   try {
     const filter = { status: 'approved' };
     if (req.query.isFeatured === 'true') filter.isFeatured = true;
@@ -44,8 +43,7 @@ const getFeaturedComplexes = async (req, res) => {
   }
 };
 
-// GET /api/complexes/public
-const getPublicComplexes = async (req, res) => {
+export const getPublicComplexes = async (req, res) => {
   try {
     const complexes = await Complex.find({ status: 'approved' })
       .select('name location city price ratingAverage ratingCount photos image description openTime closeTime');
@@ -56,8 +54,7 @@ const getPublicComplexes = async (req, res) => {
   }
 };
 
-// GET /api/complexes/public/:id
-const getPublicComplexById = async (req, res) => {
+export const getPublicComplexById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -74,8 +71,7 @@ const getPublicComplexById = async (req, res) => {
   }
 };
 
-// POST /api/complexes
-const createComplex = async (req, res) => {
+export const createComplex = async (req, res) => {
   try {
     const exists = await Complex.findOne({ owner: req.user._id });
     if (exists) return res.status(400).json({ message: 'You already have a registered complex.' });
@@ -95,8 +91,7 @@ const createComplex = async (req, res) => {
   }
 };
 
-// GET /api/complexes/me
-const getMyComplex = async (req, res) => {
+export const getMyComplex = async (req, res) => {
   try {
     const complex = await Complex.findOne({ owner: req.user._id }).select('+mercadopagoPublicKey');
     if (!complex) return res.status(404).json({ message: 'No complex registered.' });
@@ -112,8 +107,7 @@ const getMyComplex = async (req, res) => {
   }
 };
 
-// PUT /api/complexes/:id
-const updateComplex = async (req, res) => {
+export const updateComplex = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
@@ -132,14 +126,14 @@ const updateComplex = async (req, res) => {
     await complex.save();
     const data = complex.toObject();
     delete data.mercadopagoPublicKey;
+
     res.json({ complex: data });
   } catch (error) {
     res.status(500).json({ message: 'Error updating complex.', error: error.message });
   }
 };
 
-// POST /api/complexes/:id/photos
-const uploadPhotos = async (req, res) => {
+export const uploadPhotos = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
@@ -166,8 +160,7 @@ const uploadPhotos = async (req, res) => {
   }
 };
 
-// DELETE /api/complexes/:id/photos — body: { url }
-const deletePhoto = async (req, res) => {
+export const deletePhoto = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
@@ -191,8 +184,7 @@ const deletePhoto = async (req, res) => {
   }
 };
 
-// GET /api/complexes/admin  (superadmin)
-const getAdminComplexes = async (req, res) => {
+export const getAdminComplexes = async (req, res) => {
   try {
     const { status, search } = req.query;
     const filter = {};
@@ -219,8 +211,7 @@ const getAdminComplexes = async (req, res) => {
   }
 };
 
-// PATCH /api/complexes/:id/approve  (superadmin)
-const approveComplex = async (req, res) => {
+export const approveComplex = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
@@ -247,8 +238,7 @@ const approveComplex = async (req, res) => {
   }
 };
 
-// PATCH /api/complexes/:id/reject  (superadmin)
-const rejectComplex = async (req, res) => {
+export const rejectComplex = async (req, res) => {
   try {
     const { reason } = req.body;
     const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
@@ -277,8 +267,7 @@ const rejectComplex = async (req, res) => {
   }
 };
 
-// PATCH /api/complexes/:id/suspend  (superadmin)
-const suspendComplex = async (req, res) => {
+export const suspendComplex = async (req, res) => {
   try {
     const { reason } = req.body;
     const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
@@ -303,8 +292,7 @@ const suspendComplex = async (req, res) => {
   }
 };
 
-// PATCH /api/complexes/:id/featured  (superadmin)
-const toggleFeatured = async (req, res) => {
+export const toggleFeatured = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
@@ -318,8 +306,7 @@ const toggleFeatured = async (req, res) => {
   }
 };
 
-// DELETE /api/complexes/:id  (superadmin)
-const deleteComplex = async (req, res) => {
+export const deleteComplex = async (req, res) => {
   try {
     const complex = await Complex.findByIdAndDelete(req.params.id);
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
@@ -327,13 +314,4 @@ const deleteComplex = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Internal server error.' });
   }
-};
-
-module.exports = {
-  getFeaturedComplexes,
-  getPublicComplexes, getPublicComplexById,
-  createComplex, getMyComplex, updateComplex,
-  uploadPhotos, deletePhoto,
-  getAdminComplexes, approveComplex, rejectComplex, suspendComplex, deleteComplex,
-  toggleFeatured,
 };

@@ -1,12 +1,12 @@
-const express = require('express');
-const { createBooking, getBookings, cancelBooking } = require('../controllers/bookingController');
-const { protect } = require('../middlewares/authMiddleware');
-const { requireRole } = require('../middlewares/roleMiddleware');
+import { Router } from 'express';
+import { createBooking, getBookings, cancelBooking } from '../controllers/bookingController.js';
+import { protect } from '../middlewares/authMiddleware.js';
+import { requireRole } from '../middlewares/roleMiddleware.js';
 
-const router = express.Router();
+const router = Router();
 
 router.post('/', protect, requireRole('player'), createBooking);
 router.get('/', protect, getBookings);
 router.patch('/:id/cancel', protect, cancelBooking);
 
-module.exports = router;
+export default router;

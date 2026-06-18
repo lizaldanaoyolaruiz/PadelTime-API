@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const Review = require('../models/Review');
-const Booking = require('../models/Booking');
-const Complex = require('../models/Complex');
+import mongoose from 'mongoose';
+import Review from '../models/Review.js';
+import Booking from '../models/Booking.js';
+import Complex from '../models/Complex.js';
 
 const REVIEWABLE_STATUSES = ['confirmed', 'completed'];
 
@@ -19,8 +19,7 @@ const recalculateComplexRating = async (complexId) => {
   });
 };
 
-// POST /api/reviews
-const createReview = async (req, res) => {
+export const createReview = async (req, res) => {
   try {
     const { complexId, rating, comment, tags } = req.body;
 
@@ -71,8 +70,7 @@ const createReview = async (req, res) => {
   }
 };
 
-// GET /api/reviews/complex/:complexId (public)
-const getComplexReviews = async (req, res) => {
+export const getComplexReviews = async (req, res) => {
   try {
     const { complexId } = req.params;
 
@@ -89,18 +87,13 @@ const getComplexReviews = async (req, res) => {
 
     if (!complex) return res.status(404).json({ message: 'Complex not found.' });
 
-    res.json({
-      average: complex.ratingAverage,
-      count: complex.ratingCount,
-      reviews,
-    });
+    res.json({ average: complex.ratingAverage, count: complex.ratingCount, reviews });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching reviews.', error: error.message });
   }
 };
 
-// GET /api/reviews/can-review/:complexId (player)
-const canReview = async (req, res) => {
+export const canReview = async (req, res) => {
   try {
     const { complexId } = req.params;
 
@@ -123,8 +116,7 @@ const canReview = async (req, res) => {
   }
 };
 
-// GET /api/reviews/owner (admin)
-const getOwnerReviews = async (req, res) => {
+export const getOwnerReviews = async (req, res) => {
   try {
     const complex = await Complex.findOne({ owner: req.user._id });
     if (!complex) return res.status(404).json({ message: 'No complex registered.' });
@@ -133,18 +125,13 @@ const getOwnerReviews = async (req, res) => {
       .populate('user', 'name')
       .sort({ createdAt: -1 });
 
-    res.json({
-      average: complex.ratingAverage,
-      count: complex.ratingCount,
-      reviews,
-    });
+    res.json({ average: complex.ratingAverage, count: complex.ratingCount, reviews });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching reviews.', error: error.message });
   }
 };
 
-// PATCH /api/reviews/:id (player, dueño de la review)
-const updateReview = async (req, res) => {
+export const updateReview = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(404).json({ message: 'Review not found.' });
@@ -177,8 +164,7 @@ const updateReview = async (req, res) => {
   }
 };
 
-// DELETE /api/reviews/:id (player dueño de la review, o superadmin)
-const deleteReview = async (req, res) => {
+export const deleteReview = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(404).json({ message: 'Review not found.' });
@@ -200,8 +186,4 @@ const deleteReview = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Error deleting review.', error: error.message });
   }
-};
-
-module.exports = {
-  createReview, getComplexReviews, canReview, getOwnerReviews, updateReview, deleteReview,
 };

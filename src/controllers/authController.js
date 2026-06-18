@@ -1,7 +1,7 @@
-const crypto = require('crypto');
-const User = require('../models/User');
-const generateToken = require('../utils/generateToken');
-const { sendVerificationEmail } = require('../services/emailService');
+import crypto from 'crypto';
+import User from '../models/User.js';
+import generateToken from '../utils/generateToken.js';
+import { sendVerificationEmail } from '../services/emailService.js';
 
 const formatUser = (user) => ({
   id: user._id,
@@ -12,25 +12,15 @@ const formatUser = (user) => ({
   isVerified: user.isVerified,
 });
 
-// POST /api/auth/register
-const register = async (req, res) => {
+export const register = async (req, res) => {
   try {
-    const { name, firstName, lastName, nombre, apellido, email, password, role } = req.body;
-
-    const resolvedName = name
-      || (firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName)
-      || (nombre && apellido ? `${nombre} ${apellido}` : nombre || apellido);
-    if (!resolvedName || resolvedName.trim().length < 2) {
-      return res.status(400).json({ message: 'Name is required (min 2 characters).' });
-    }
+    const { name, email, password, role } = req.body;
 
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: 'Email already registered.' });
 
-    const allowedRoles = ['player', 'admin'];
-    const assignedRole = allowedRoles.includes(role) ? role : 'player';
-
-    const userData = { name: resolvedName.trim(), email, password, role: assignedRole };
+    const assignedRole = role === 'admin' ? 'admin' : 'player';
+    const userData = { name, email, password, role: assignedRole };
 
     if (assignedRole === 'player') {
       const token = crypto.randomBytes(32).toString('hex');
@@ -49,17 +39,18 @@ const register = async (req, res) => {
     }
 
     userData.isVerified = true;
+    userData.status = 'approved';
+
     const user = await User.create(userData);
     const token = generateToken(user);
 
-    res.status(201).json({ token, user: formatUser(user) });
+    res.status(201).json({ message: 'Admin account created.', token, user: formatUser(user) });
   } catch (error) {
     res.status(500).json({ message: 'Error registering user.', error: error.message });
   }
 };
 
-// GET /api/auth/verify-email?token=...
-const verifyEmail = async (req, res) => {
+export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) return res.status(400).json({ message: 'Token is required.' });
@@ -77,8 +68,7 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-// POST /api/auth/login
-const login = async (req, res) => {
+export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -98,9 +88,6 @@ const login = async (req, res) => {
   }
 };
 
-// GET /api/auth/me
-const getMe = async (req, res) => {
+export const getMe = async (req, res) => {
   res.json({ user: formatUser(req.user) });
 };
-
-module.exports = { register, verifyEmail, login, getMe };
