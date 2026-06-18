@@ -1,14 +1,14 @@
-const express = require('express');
-const { body } = require('express-validator');
-const {
+import { Router } from 'express';
+import { body } from 'express-validator';
+import {
   createCourt, getCourtsByComplex, updateCourt, deleteCourt, getPublicCourts,
-} = require('../controllers/courtController');
-const { protect } = require('../middlewares/authMiddleware');
-const { requireRole } = require('../middlewares/roleMiddleware');
-const { uploadSingle } = require('../middlewares/uploadMiddleware');
-const validate = require('../middlewares/validateMiddleware');
+} from '../controllers/courtController.js';
+import { protect } from '../middlewares/authMiddleware.js';
+import { requireRole } from '../middlewares/roleMiddleware.js';
+import { uploadSingle } from '../middlewares/uploadMiddleware.js';
+import validate from '../middlewares/validateMiddleware.js';
 
-const router = express.Router();
+const router = Router();
 
 const courtRules = [
   body('name').trim().notEmpty().withMessage('Name is required.'),
@@ -16,13 +16,11 @@ const courtRules = [
   body('pricePerHour').isFloat({ min: 0 }).withMessage('Price per hour must be a positive number.'),
 ];
 
-// Public
 router.get('/public', getPublicCourts);
 
-// Owner / superadmin
 router.post('/', protect, requireRole('admin', 'superadmin'), uploadSingle, courtRules, validate, createCourt);
 router.get('/', protect, requireRole('admin', 'superadmin'), getCourtsByComplex);
 router.put('/:id', protect, requireRole('admin', 'superadmin'), uploadSingle, courtRules, validate, updateCourt);
 router.delete('/:id', protect, requireRole('admin', 'superadmin'), deleteCourt);
 
-module.exports = router;
+export default router;

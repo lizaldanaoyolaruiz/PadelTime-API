@@ -1,12 +1,13 @@
-const OpenAI = require('openai');
-const Complex = require('../models/Complex');
-const { generarSystemPrompt } = require('../config/chatbotPrompt');
+import OpenAI from 'openai';
+import Complex from '../models/Complex.js';
+import { generarSystemPrompt } from '../config/chatbotPrompt.js';
 
-const chatbot = async (req, res) => {
+export const chatbot = async (req, res) => {
   const groq = new OpenAI({
     apiKey: process.env.GROQ_API_KEY,
     baseURL: 'https://api.groq.com/openai/v1',
   });
+
   try {
     const { message, history = [] } = req.body;
 
@@ -64,5 +65,3 @@ const chatbot = async (req, res) => {
     });
   }
 };
-
-module.exports = { chatbot };

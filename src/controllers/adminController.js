@@ -1,8 +1,7 @@
-const User = require('../models/User');
-const { sendApprovalEmail, sendRejectionEmail } = require('../services/emailService');
+import User from '../models/User.js';
+import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
 
-// GET /api/admin/users?status=pending|approved|rejected
-const getAdminUsers = async (req, res) => {
+export const getAdminUsers = async (req, res) => {
   try {
     const { status } = req.query;
     const filter = { role: 'admin' };
@@ -15,8 +14,7 @@ const getAdminUsers = async (req, res) => {
   }
 };
 
-// PATCH /api/admin/users/:id/approve
-const approveAdmin = async (req, res) => {
+export const approveAdmin = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user || user.role !== 'admin') {
@@ -36,8 +34,7 @@ const approveAdmin = async (req, res) => {
   }
 };
 
-// PATCH /api/admin/users/:id/reject
-const rejectAdmin = async (req, res) => {
+export const rejectAdmin = async (req, res) => {
   try {
     const { reason } = req.body;
 
@@ -58,5 +55,3 @@ const rejectAdmin = async (req, res) => {
     res.status(500).json({ message: 'Error rejecting admin.', error: error.message });
   }
 };
-
-module.exports = { getAdminUsers, approveAdmin, rejectAdmin };

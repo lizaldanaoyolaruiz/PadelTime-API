@@ -1,7 +1,7 @@
-const { Readable } = require('stream');
-const cloudinary = require('../config/cloudinary');
-const Court = require('../models/Court');
-const Complex = require('../models/Complex');
+import { Readable } from 'stream';
+import cloudinary from '../config/cloudinary.js';
+import Court from '../models/Court.js';
+import Complex from '../models/Complex.js';
 
 const uploadImage = (buffer, folder) =>
   new Promise((resolve, reject) => {
@@ -19,8 +19,7 @@ const getComplexIfOwner = async (complexId, userId, role) => {
   return complex;
 };
 
-// POST /api/courts
-const createCourt = async (req, res) => {
+export const createCourt = async (req, res) => {
   try {
     const { complexId, name, type, description, features, pricePerHour, schedule } = req.body;
 
@@ -44,8 +43,7 @@ const createCourt = async (req, res) => {
   }
 };
 
-// GET /api/courts?complexId=...
-const getCourtsByComplex = async (req, res) => {
+export const getCourtsByComplex = async (req, res) => {
   try {
     const { complexId } = req.query;
     if (!complexId) return res.status(400).json({ message: 'complexId is required.' });
@@ -60,8 +58,7 @@ const getCourtsByComplex = async (req, res) => {
   }
 };
 
-// PUT /api/courts/:id
-const updateCourt = async (req, res) => {
+export const updateCourt = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
     if (!court) return res.status(404).json({ message: 'Court not found.' });
@@ -84,8 +81,7 @@ const updateCourt = async (req, res) => {
   }
 };
 
-// DELETE /api/courts/:id
-const deleteCourt = async (req, res) => {
+export const deleteCourt = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
     if (!court) return res.status(404).json({ message: 'Court not found.' });
@@ -100,8 +96,7 @@ const deleteCourt = async (req, res) => {
   }
 };
 
-// GET /api/courts/public?complexId=...  (no auth)
-const getPublicCourts = async (req, res) => {
+export const getPublicCourts = async (req, res) => {
   try {
     const { complexId } = req.query;
     if (!complexId) return res.status(400).json({ message: 'complexId is required.' });
@@ -112,5 +107,3 @@ const getPublicCourts = async (req, res) => {
     res.status(500).json({ message: 'Error fetching courts.', error: error.message });
   }
 };
-
-module.exports = { createCourt, getCourtsByComplex, updateCourt, deleteCourt, getPublicCourts };

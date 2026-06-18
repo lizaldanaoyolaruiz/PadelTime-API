@@ -1,11 +1,11 @@
-const express = require('express');
-const { exportBookings } = require('../controllers/reportController');
-const { protect } = require('../middlewares/authMiddleware');
-const { requireRole } = require('../middlewares/roleMiddleware');
+import { Router } from 'express';
+import { exportBookings } from '../controllers/reportController.js';
+import { protect } from '../middlewares/authMiddleware.js';
+import { requireRole } from '../middlewares/roleMiddleware.js';
 
-const router = express.Router();
+const router = Router();
 
 router.get('/export', protect, requireRole('admin'), exportBookings);
 router.post('/export', protect, requireRole('admin'), exportBookings);
 
-module.exports = router;
+export default router;
