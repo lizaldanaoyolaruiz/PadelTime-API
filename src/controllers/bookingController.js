@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-const Booking = require('../models/Booking');
-const Complex = require('../models/Complex');
-const { createPreference } = require('../services/mpService');
-=======
 import Booking from '../models/Booking.js';
->>>>>>> 900dad729b7d2cfd6a908852d27b185064b89f15
+import Complex from '../models/Complex.js';
+import { createPreference } from '../services/mpService.js';
 
 export const createBooking = async (req, res) => {
   try {
@@ -22,10 +18,8 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ message: 'Faltan campos requeridos.' });
     }
 
-
     const complex = await Complex.findById(complexId).select('+mpAccessToken');
 
-  
     const depositAmount = complex
       ? Math.round(totalAmount * (complex.depositPercentage / 100) * 100) / 100
       : (Number(req.body.depositAmount) || Math.round(totalAmount * 0.3 * 100) / 100);
@@ -36,7 +30,6 @@ export const createBooking = async (req, res) => {
 
     const bookingDate = new Date(date);
 
-  
     const conflict = await Booking.findOne({
       court,
       date: bookingDate,
@@ -53,7 +46,6 @@ export const createBooking = async (req, res) => {
       return res.status(409).json({ message: 'La cancha ya está reservada para ese horario.' });
     }
 
-    
     const booking = await Booking.create({
       court,
       complex: complexId,
@@ -72,14 +64,11 @@ export const createBooking = async (req, res) => {
       { path: 'complex', select: 'name location city whatsapp' },
     ]);
 
-
     if (confirmationMethod !== 'mercadopago') {
       return res.status(201).json(booking);
     }
 
-  
     if (!complex?.mpAccessToken) {
-
       return res.status(201).json(booking);
     }
 
@@ -98,7 +87,6 @@ export const createBooking = async (req, res) => {
         payment: { initPoint: preference.init_point },
       });
     } catch (mpError) {
-  
       console.error('[MP] createPreference error:', mpError.message);
       return res.status(201).json(booking);
     }
