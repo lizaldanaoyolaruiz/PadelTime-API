@@ -1,13 +1,13 @@
-const express = require('express');
-const { body } = require('express-validator');
-const {
+import { Router } from 'express';
+import { body } from 'express-validator';
+import {
   createReview, getComplexReviews, canReview, getOwnerReviews, updateReview, deleteReview,
-} = require('../controllers/reviewController');
-const { protect } = require('../middlewares/authMiddleware');
-const { requireRole } = require('../middlewares/roleMiddleware');
-const validate = require('../middlewares/validateMiddleware');
+} from '../controllers/reviewController.js';
+import { protect } from '../middlewares/authMiddleware.js';
+import { requireRole } from '../middlewares/roleMiddleware.js';
+import validate from '../middlewares/validateMiddleware.js';
 
-const router = express.Router();
+const router = Router();
 
 const reviewRules = [
   body('complexId').notEmpty().withMessage('complexId is required.'),
@@ -22,16 +22,13 @@ const updateReviewRules = [
   body('tags').optional().isArray().withMessage('Tags must be an array.'),
 ];
 
-// Public
 router.get('/complex/:complexId', getComplexReviews);
 
-// Player
 router.post('/', protect, requireRole('player'), reviewRules, validate, createReview);
 router.get('/can-review/:complexId', protect, requireRole('player'), canReview);
 router.patch('/:id', protect, requireRole('player'), updateReviewRules, validate, updateReview);
 router.delete('/:id', protect, deleteReview);
 
-// Owner
 router.get('/owner', protect, requireRole('admin'), getOwnerReviews);
 
-module.exports = router;
+export default router;

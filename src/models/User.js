@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema(
   {
@@ -28,13 +28,11 @@ const userSchema = new mongoose.Schema(
       enum: ['player', 'admin', 'superadmin'],
       default: 'player',
     },
-    // Only relevant for admins: pending → approved / rejected by superadmin
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected'],
       default: 'pending',
     },
-    // Email verification for players
     isVerified: { type: Boolean, default: false },
     verificationToken: { type: String, select: false },
   },
@@ -50,4 +48,4 @@ userSchema.methods.comparePassword = function (candidate) {
   return bcrypt.compare(candidate, this.password);
 };
 
-module.exports = mongoose.model('User', userSchema);
+export default mongoose.model('User', userSchema);

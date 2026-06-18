@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 const Booking = require('../models/Booking');
 const Complex = require('../models/Complex');
 const { createPreference } = require('../services/mpService');
+=======
+import Booking from '../models/Booking.js';
+>>>>>>> 900dad729b7d2cfd6a908852d27b185064b89f15
 
-const createBooking = async (req, res) => {
+export const createBooking = async (req, res) => {
   try {
     const {
       court,
@@ -103,12 +107,10 @@ const createBooking = async (req, res) => {
   }
 };
 
-const getBookings = async (req, res) => {
+export const getBookings = async (req, res) => {
   res.status(501).json({ message: 'Not implemented yet.' });
 };
 
-const cancelBooking = async (req, res) => {
+export const cancelBooking = async (req, res) => {
   res.status(501).json({ message: 'Not implemented yet.' });
 };
-
-module.exports = { createBooking, getBookings, cancelBooking };
