@@ -8,6 +8,7 @@ import chatbotRoutes from './chatbotRoutes.js';
 import reviewRoutes from './reviewRoutes.js';
 import reportRoutes from './reportRoutes.js';
 import paymentRoutes from './paymentRoutes.js';
+import metricsRoutes from './metricsRoutes.js';
 
 const router = Router();
 

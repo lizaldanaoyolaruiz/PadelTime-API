@@ -1,24 +1,12 @@
-const metricsService = require("../services/metricsService");
+import { getMetrics as fetchMetrics } from '../services/metricsService.js';
 
-const getMetrics = async (req, res) => {
+export const getMetrics = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-
-    const metrics = await metricsService.getMetrics(
-      startDate,
-      endDate
-    );
-
+    const metrics = await fetchMetrics(startDate, endDate);
     res.status(200).json(metrics);
   } catch (error) {
     console.error(error);
-
-    res.status(500).json({
-      message: "Error obteniendo métricas",
-    });
+    res.status(500).json({ message: 'Error obteniendo métricas' });
   }
-};
-
-module.exports = {
-  getMetrics,
 };
