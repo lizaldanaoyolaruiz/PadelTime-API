@@ -10,6 +10,7 @@ const reviewRoutes = require('./reviewRoutes');
 const clubRoutes = require('./clubRoutes');
 const superAdminGestionRoutes = require('./superAdminGestionRoutes');
 const reportRoutes = require('./reportRoutes');
+const paymentRoutes = require('./paymentRoutes');
 const router = express.Router();
 
 router.get('/health', (req, res) => {
@@ -26,5 +27,6 @@ router.use('/superadmin', superAdminGestionRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/reports', reportRoutes);
+router.use('/payments', paymentRoutes);
 
 module.exports = router;
