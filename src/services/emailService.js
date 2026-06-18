@@ -53,13 +53,8 @@ export const sendRejectionEmail = async (user, reason) => {
     `,
   });
 };
-<<<<<<< HEAD
 
-/**
- * Sends a booking confirmation email once MP marks the payment as approved.
- * Expects booking to have court, complex, and player already populated.
- */
-const sendBookingConfirmationEmail = async (booking) => {
+export const sendBookingConfirmationEmail = async (booking) => {
   const player = booking.player;
   const court = booking.court;
   const complex = booking.complex;
@@ -95,13 +90,3 @@ const sendBookingConfirmationEmail = async (booking) => {
     `,
   });
 };
-
-module.exports = {
-  sendVerificationEmail,
-  sendPendingApprovalEmail,
-  sendApprovalEmail,
-  sendRejectionEmail,
-  sendBookingConfirmationEmail,
-};
-=======
->>>>>>> 900dad729b7d2cfd6a908852d27b185064b89f15
