@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const daySchema = new mongoose.Schema(
   {
@@ -32,4 +32,4 @@ const courtSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Court', courtSchema);
+export default mongoose.model('Court', courtSchema);
