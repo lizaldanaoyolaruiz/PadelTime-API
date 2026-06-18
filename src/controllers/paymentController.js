@@ -1,7 +1,6 @@
-const Booking = require('../models/Booking');
-const { getPayment } = require('../services/mpService');
-const { sendBookingConfirmationEmail } = require('../services/emailService');
-
+import Booking from '../models/Booking.js';
+import { getPayment } from '../services/mpService.js';
+import { sendBookingConfirmationEmail } from '../services/emailService.js';
 
 const processPaymentNotification = async (bookingId, paymentId) => {
   const booking = await Booking.findById(bookingId)
@@ -14,7 +13,6 @@ const processPaymentNotification = async (bookingId, paymentId) => {
     return;
   }
 
-  
   if (booking.status === 'confirmed' || booking.status === 'cancelled') return;
 
   const accessToken = booking.complex?.mpAccessToken;
@@ -25,7 +23,6 @@ const processPaymentNotification = async (bookingId, paymentId) => {
 
   const payment = await getPayment(accessToken, paymentId);
 
-  
   if (payment.external_reference !== bookingId) {
     console.error(`[Webhook] external_reference mismatch for payment ${paymentId}`);
     return;
@@ -46,26 +43,17 @@ const processPaymentNotification = async (bookingId, paymentId) => {
     booking.status = 'cancelled';
     await booking.save();
   }
-  
 };
 
-
-const handleWebhook = async (req, res) => {
-  
+export const handleWebhook = async (req, res) => {
   res.sendStatus(200);
 
   try {
     const { type, data } = req.body;
-
     if (type !== 'payment' || !data?.id) return;
 
-    await processPaymentNotification(
-      req.params.bookingId,
-      data.id.toString()
-    );
+    await processPaymentNotification(req.params.bookingId, data.id.toString());
   } catch (error) {
     console.error('[Webhook] Processing error:', error.message);
   }
 };
-
-module.exports = { handleWebhook };
