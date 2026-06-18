@@ -1,8 +1,10 @@
-const express = require("express");
-const router = express.Router();
+import { Router } from 'express';
+import { getMetrics } from '../controllers/metricsController.js';
+import { protect } from '../middlewares/authMiddleware.js';
+import { requireRole } from '../middlewares/roleMiddleware.js';
 
-const metricsController = require("../controllers/metricsController");
+const router = Router();
 
-router.get("/", metricsController.getMetrics);
+router.get('/', protect, requireRole('admin', 'superadmin'), getMetrics);
 
-module.exports = router;
+export default router;
