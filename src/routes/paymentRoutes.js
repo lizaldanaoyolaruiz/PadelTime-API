@@ -1,9 +1,8 @@
-const express = require('express');
-const { handleWebhook } = require('../controllers/paymentController');
+import { Router } from 'express';
+import { handleWebhook } from '../controllers/paymentController.js';
 
-const router = express.Router();
+const router = Router();
 
-// No auth — Mercado Pago POSTs here from their servers
 router.post('/webhook/:bookingId', handleWebhook);
 
-module.exports = router;
+export default router;
