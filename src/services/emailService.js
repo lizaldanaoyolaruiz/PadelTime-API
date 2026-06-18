@@ -67,9 +67,51 @@ const sendRejectionEmail = async (user, reason) => {
   });
 };
 
+/**
+ * Sends a booking confirmation email once MP marks the payment as approved.
+ * Expects booking to have court, complex, and player already populated.
+ */
+const sendBookingConfirmationEmail = async (booking) => {
+  const player = booking.player;
+  const court = booking.court;
+  const complex = booking.complex;
+
+  const dateStr = new Date(booking.date).toLocaleDateString('es-AR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  });
+
+  await transporter.sendMail({
+    from,
+    to: player.email,
+    subject: '¡Tu reserva fue confirmada! - PadelTime',
+    html: `
+      <div style="font-family: sans-serif; max-width: 520px; margin: auto;">
+        <h2 style="color: #16a34a;">¡Reserva confirmada!</h2>
+        <p>Hola <strong>${player.name}</strong>, tu seña fue acreditada y la reserva quedó confirmada.</p>
+        <table style="width:100%; border-collapse:collapse; margin-top:16px;">
+          <tr><td style="padding:6px 0; color:#555;">Complejo</td><td><strong>${complex.name}</strong></td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Dirección</td><td>${complex.location || complex.city || '-'}</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Cancha</td><td>${court.name} (${court.type})</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Fecha</td><td>${dateStr}</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Horario</td><td>${booking.startTime} – ${booking.endTime}</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Seña abonada</td><td><strong>$${booking.depositAmount}</strong></td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Total</td><td>$${booking.totalAmount}</td></tr>
+        </table>
+        <p style="margin-top:24px;">¡Nos vemos en la cancha! 🎾</p>
+        <p style="color:#888; font-size:13px;">PadelTime</p>
+      </div>
+    `,
+  });
+};
+
 module.exports = {
   sendVerificationEmail,
   sendPendingApprovalEmail,
   sendApprovalEmail,
   sendRejectionEmail,
+  sendBookingConfirmationEmail,
 };
