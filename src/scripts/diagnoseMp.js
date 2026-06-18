@@ -1,5 +1,5 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
+import 'dotenv/config';
+import mongoose from 'mongoose';
 
 const run = async () => {
   await mongoose.connect(process.env.MONGODB_URI);
