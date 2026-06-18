@@ -1,8 +1,5 @@
-const https = require('https');
+import https from 'https';
 
-// Low-level wrapper around the MP REST API — no SDK needed.
-// To migrate to OAuth marketplace: only the token acquisition changes;
-// createPreference() and getPayment() signatures stay the same.
 const mpRequest = (method, path, accessToken, body = null) => {
   return new Promise((resolve, reject) => {
     const bodyStr = body ? JSON.stringify(body) : null;
@@ -14,7 +11,6 @@ const mpRequest = (method, path, accessToken, body = null) => {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        // Prevents duplicate preferences if the request is retried
         'X-Idempotency-Key': `pt-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         ...(bodyStr ? { 'Content-Length': Buffer.byteLength(bodyStr) } : {}),
       },
@@ -38,15 +34,7 @@ const mpRequest = (method, path, accessToken, body = null) => {
   });
 };
 
-/**
- * Creates a checkout preference on the owner's MP account.
- * Uses sandbox when the token starts with "TEST-", production otherwise.
- *
- * @param {string} accessToken - Owner's MP access token (stored in complex.mpAccessToken)
- * @param {{ booking, complex, court }} ctx
- * @returns {Promise<{ id, init_point, sandbox_init_point }>}
- */
-const createPreference = async (accessToken, { booking, complex, court }) => {
+export const createPreference = async (accessToken, { booking, complex, court }) => {
   const backendUrl = process.env.BACKEND_URL;
   const clientUrl = process.env.CLIENT_URL;
 
@@ -69,7 +57,6 @@ const createPreference = async (accessToken, { booking, complex, court }) => {
       failure: `${clientUrl}/booking/failure`,
       pending: `${clientUrl}/booking/pending`,
     },
-    // bookingId in the path lets the webhook handler look up the right complex token
     notification_url: `${backendUrl}/api/payments/webhook/${booking._id}`,
     statement_descriptor: 'PADELTIME',
     metadata: {
@@ -87,14 +74,7 @@ const createPreference = async (accessToken, { booking, complex, court }) => {
   return response.body;
 };
 
-/**
- * Fetches full payment details from the MP API.
- *
- * @param {string} accessToken - Owner's MP access token
- * @param {string} paymentId
- * @returns {Promise<{ id, status, status_detail, external_reference, ... }>}
- */
-const getPayment = async (accessToken, paymentId) => {
+export const getPayment = async (accessToken, paymentId) => {
   const response = await mpRequest('GET', `/v1/payments/${paymentId}`, accessToken);
 
   if (response.status !== 200) {
@@ -103,5 +83,3 @@ const getPayment = async (accessToken, paymentId) => {
 
   return response.body;
 };
-
-module.exports = { createPreference, getPayment };
