@@ -6,7 +6,7 @@ import {
   createComplex, getMyComplex, updateComplex,
   uploadPhotos, deletePhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex, deleteComplex,
-  toggleFeatured,
+  toggleFeatured, getMyComplexes,
 } from '../controllers/complexController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { requireRole } from '../middlewares/roleMiddleware.js';
@@ -41,6 +41,7 @@ router.get('/public/:id', getPublicComplexById);
 
 router.post('/', protect, requireRole('admin'), complexRules, validate, createComplex);
 router.get('/me', protect, requireRole('admin'), getMyComplex);
+router.get('/me/all', protect, requireRole('admin'), getMyComplexes);
 router.put('/:id', protect, requireRole('admin', 'superadmin'), complexUpdateRules, validate, updateComplex);
 router.post('/:id/photos', protect, requireRole('admin', 'superadmin'), uploadMultiple, uploadPhotos);
 router.delete('/:id/photos', protect, requireRole('admin', 'superadmin'), deletePhoto);
