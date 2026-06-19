@@ -3,6 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from './src/config/db.js';
 import routes from './src/routes/index.js';
+const superAdminRoutes = require(
+  "./routes/superAdmin.routes"
+);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,7 +18,10 @@ app.use('/api', routes);
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found.' });
 });
-
+app.use(
+  "/api/super-admin",
+  superAdminRoutes
+);
 connectDB()
   .then(() => {
     app.listen(PORT, () => {
