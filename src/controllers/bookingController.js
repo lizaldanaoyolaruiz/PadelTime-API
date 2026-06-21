@@ -2,7 +2,9 @@ import Booking from '../models/Booking.js';
 import Complex from '../models/Complex.js';
 import Court from '../models/Court.js';
 import Blockout from '../models/Blockout.js';
+import MaintenanceSlot from '../models/MaintenanceSlot.js';
 import { createPreference } from '../services/mpService.js';
+import { sendBookingConfirmedByOwnerEmail, sendBookingRejectedEmail } from '../services/emailService.js';
 
 const padHour = (h) => String(h).padStart(2, '0') + ':00';
 
@@ -43,7 +45,7 @@ export const getSlots = async (req, res) => {
 
     const fechas = generarFechas(from, to);
 
-    const [reservas, blockouts] = await Promise.all([
+    const [reservas, blockouts, mantenimientos] = await Promise.all([
       Booking.find({
         court: courtId,
         date: { $in: fechas },
@@ -56,6 +58,13 @@ export const getSlots = async (req, res) => {
         isActive: true,
         $or: [{ courtId: null }, { courtId: cancha._id }],
       }).lean(),
+      MaintenanceSlot.find({
+        court: courtId,
+        date: { $in: fechas },
+        isActive: true,
+      })
+        .select('date startTime endTime')
+        .lean(),
     ]);
 
     const slots = [];
@@ -75,18 +84,26 @@ export const getSlots = async (req, res) => {
         if (reservaEnSlot) {
           statusSlot = reservaEnSlot.status === 'confirmed' ? 'reservado' : 'pendiente';
         } else {
-          const enMantenimiento = blockouts.some((b) => {
+          const enMantenimientoPuntual = mantenimientos.some(
+            (m) => m.date === fecha && m.startTime < horaFinStr && m.endTime > horaStr
+          );
+          const enMantenimientoRecurrente = !enMantenimientoPuntual && blockouts.some((b) => {
             if (b.recurrence === 'weekly' && b.dayOfWeek !== diaSemana) return false;
             return b.startTime < horaFinStr && b.endTime > horaStr;
           });
-          statusSlot = enMantenimiento ? 'mantenimiento' : 'disponible';
+          statusSlot = (enMantenimientoPuntual || enMantenimientoRecurrente) ? 'mantenimiento' : 'disponible';
         }
+
+        const statusFinal =
+          req.query.vista === 'publica' && statusSlot === 'pendiente'
+            ? 'reservado'
+            : statusSlot;
 
         slots.push({
           courtId,
           date: fecha,
           hour: hora,
-          status: statusSlot,
+          status: statusFinal,
         });
       }
     }
@@ -258,6 +275,84 @@ export const createBooking = async (req, res) => {
   }
 };
 
+export const getBookingStats = async (req, res) => {
+  try {
+    const { from, to, courtId } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ message: 'Se requieren from y to.' });
+    }
+
+    const fechas = generarFechas(from, to);
+
+    const filtro = {
+      date: { $in: fechas },
+      status: { $in: ['pending', 'confirmed'] },
+    };
+
+    if (courtId) {
+      filtro.court = courtId;
+    } else if (req.user.role === 'admin') {
+      const complejos = await Complex.find({ owner: req.user._id }).select('_id').lean();
+      filtro.complex = { $in: complejos.map((c) => c._id) };
+    }
+
+    const reservas = await Booking.find(filtro).lean();
+
+    const totalSlots = fechas.length * 16;
+    const occupancyRate = totalSlots > 0 ? Math.round((reservas.length / totalSlots) * 100) : 0;
+
+    const estimatedRevenue = reservas
+      .filter((r) => r.status === 'confirmed')
+      .reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+
+    const jugadoresUnicos = new Set(
+      reservas.filter((r) => r.player).map((r) => r.player.toString())
+    ).size;
+
+    return res.json({ occupancyRate, estimatedRevenue, newPlayers: jugadoresUnicos });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error al obtener estadísticas.', error: error.message });
+  }
+};
+
+export const confirmarPago = async (req, res) => {
+  try {
+    const reserva = await Booking.findById(req.params.id);
+    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+
+    if (reserva.confirmationMethod !== 'mercadopago') {
+      return res.status(400).json({ message: 'Esta reserva no es de MercadoPago.' });
+    }
+
+    if (reserva.status === 'confirmed') {
+      await reserva.populate([
+        { path: 'court', select: '_id name' },
+        { path: 'complex', select: '_id whatsapp' },
+        { path: 'player', select: '_id name' },
+      ]);
+      return res.json({ booking: reserva });
+    }
+
+    if (reserva.status === 'cancelled' || reserva.status === 'rejected') {
+      return res.status(400).json({ message: 'La reserva fue cancelada o rechazada.' });
+    }
+
+    reserva.status = 'confirmed';
+    await reserva.save();
+
+    await reserva.populate([
+      { path: 'court', select: '_id name' },
+      { path: 'complex', select: '_id whatsapp' },
+      { path: 'player', select: '_id name' },
+    ]);
+
+    return res.json({ booking: reserva });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error al confirmar el pago.', error: error.message });
+  }
+};
+
 export const confirmarReserva = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id);
@@ -273,9 +368,13 @@ export const confirmarReserva = async (req, res) => {
 
     await reserva.populate([
       { path: 'court', select: '_id name' },
-      { path: 'complex', select: '_id whatsapp' },
-      { path: 'player', select: '_id name' },
+      { path: 'complex', select: '_id name whatsapp' },
+      { path: 'player', select: '_id name email' },
     ]);
+
+    sendBookingConfirmedByOwnerEmail(reserva).catch((err) =>
+      console.error('[Email] Error enviando confirmación:', err.message)
+    );
 
     return res.json({ booking: reserva });
   } catch (error) {
@@ -293,15 +392,20 @@ export const rechazarReserva = async (req, res) => {
       if (!complejo) return res.status(403).json({ message: 'Acceso denegado.' });
     }
 
+    const motivo = req.body.reason || '';
     reserva.status = 'rejected';
-    if (req.body.reason) reserva.observaciones = req.body.reason;
+    if (motivo) reserva.observaciones = motivo;
     await reserva.save();
 
     await reserva.populate([
       { path: 'court', select: '_id name' },
-      { path: 'complex', select: '_id whatsapp' },
-      { path: 'player', select: '_id name' },
+      { path: 'complex', select: '_id name whatsapp' },
+      { path: 'player', select: '_id name email' },
     ]);
+
+    sendBookingRejectedEmail(reserva, motivo).catch((err) =>
+      console.error('[Email] Error enviando rechazo:', err.message)
+    );
 
     return res.json({ booking: reserva });
   } catch (error) {

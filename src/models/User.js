@@ -35,6 +35,7 @@ const userSchema = new mongoose.Schema(
     },
     isVerified: { type: Boolean, default: false },
     verificationToken: { type: String, select: false },
+    favoritos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Complex' }],
   },
   { timestamps: true }
 );
