@@ -91,9 +91,22 @@ export const createComplex = async (req, res) => {
   }
 };
 
+export const getMyComplexes = async (req, res) => {
+  try {
+    const complexes = await Complex.find({ owner: req.user._id }).select('_id name city status').lean();
+    res.json({ complexes });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching complexes.', error: error.message });
+  }
+};
+
 export const getMyComplex = async (req, res) => {
   try {
-    const complex = await Complex.findOne({ owner: req.user._id }).select('+mercadopagoPublicKey');
+    const filtro = req.query.complexId
+      ? { _id: req.query.complexId, owner: req.user._id }
+      : { owner: req.user._id };
+
+    const complex = await Complex.findOne(filtro).select('+mercadopagoPublicKey');
     if (!complex) return res.status(404).json({ message: 'No complex registered.' });
 
     const data = complex.toObject();

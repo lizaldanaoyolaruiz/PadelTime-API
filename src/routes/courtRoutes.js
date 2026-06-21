@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import {
-  createCourt, getCourtsByComplex, updateCourt, deleteCourt, getPublicCourts,
+  createCourt, getCourtsByComplex, updateCourt, deleteCourt, getPublicCourts, getPublicCourtById,
 } from '../controllers/courtController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { requireRole } from '../middlewares/roleMiddleware.js';
@@ -17,6 +17,7 @@ const courtRules = [
 ];
 
 router.get('/public', getPublicCourts);
+router.get('/public/:id', getPublicCourtById);
 
 router.post('/', protect, requireRole('admin', 'superadmin'), uploadSingle, courtRules, validate, createCourt);
 router.get('/', protect, requireRole('admin', 'superadmin'), getCourtsByComplex);

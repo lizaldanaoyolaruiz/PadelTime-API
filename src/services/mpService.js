@@ -53,9 +53,9 @@ export const createPreference = async (accessToken, { booking, complex, court })
     ],
     external_reference: booking._id.toString(),
     back_urls: {
-      success: `${clientUrl}/booking/success`,
-      failure: `${clientUrl}/booking/failure`,
-      pending: `${clientUrl}/booking/pending`,
+      success: `${clientUrl}/booking/success?bookingId=${booking._id}`,
+      failure: `${clientUrl}/booking/failure?bookingId=${booking._id}`,
+      pending: `${clientUrl}/booking/pending?bookingId=${booking._id}`,
     },
     notification_url: `${backendUrl}/api/payments/webhook/${booking._id}`,
     statement_descriptor: 'PADELTIME',
