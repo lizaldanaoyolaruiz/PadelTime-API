@@ -107,3 +107,18 @@ export const getPublicCourts = async (req, res) => {
     res.status(500).json({ message: 'Error fetching courts.', error: error.message });
   }
 };
+
+export const getPublicCourtById = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.id)
+      .populate('complex', 'name whatsapp openTime closeTime depositPercentage')
+      .lean();
+
+    if (!court) return res.status(404).json({ message: 'Cancha no encontrada.' });
+    if (!court.enabled) return res.status(400).json({ message: 'La cancha no está disponible.' });
+
+    res.json({ court });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener la cancha.', error: error.message });
+  }
+};
