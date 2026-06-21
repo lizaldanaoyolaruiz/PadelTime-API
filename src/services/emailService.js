@@ -54,6 +54,66 @@ export const sendRejectionEmail = async (user, reason) => {
   });
 };
 
+export const sendBookingConfirmedByOwnerEmail = async (booking) => {
+  const destinatario = booking.player?.email || booking.jugadorExterno?.email;
+  const nombre = booking.player?.name ||
+    (booking.jugadorExterno ? `${booking.jugadorExterno.nombre} ${booking.jugadorExterno.apellido}` : 'Jugador');
+
+  if (!destinatario) return;
+
+  const court   = booking.court;
+  const complex = booking.complex;
+
+  await transporter.sendMail({
+    from,
+    to: destinatario,
+    subject: '¡Tu reserva fue confirmada! - PadelTime',
+    html: `
+      <div style="font-family: sans-serif; max-width: 520px; margin: auto;">
+        <h2 style="color: #16a34a;">¡Reserva confirmada!</h2>
+        <p>Hola <strong>${nombre}</strong>, el complejo confirmó tu reserva.</p>
+        <table style="width:100%; border-collapse:collapse; margin-top:16px;">
+          <tr><td style="padding:6px 0; color:#555;">Complejo</td><td><strong>${complex?.name || '-'}</strong></td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Cancha</td><td>${court?.name || '-'}</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Fecha</td><td>${booking.date}</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Horario</td><td>${booking.startTime} – ${booking.endTime}</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Total</td><td>$${booking.totalAmount}</td></tr>
+        </table>
+        <p style="margin-top:24px;">¡Nos vemos en la cancha!</p>
+        <p style="color:#888; font-size:13px;">PadelTime</p>
+      </div>
+    `,
+  });
+};
+
+export const sendBookingRejectedEmail = async (booking, motivo) => {
+  const destinatario = booking.player?.email || booking.jugadorExterno?.email;
+  const nombre = booking.player?.name ||
+    (booking.jugadorExterno ? `${booking.jugadorExterno.nombre} ${booking.jugadorExterno.apellido}` : 'Jugador');
+
+  if (!destinatario) return;
+
+  await transporter.sendMail({
+    from,
+    to: destinatario,
+    subject: 'Tu reserva fue rechazada - PadelTime',
+    html: `
+      <div style="font-family: sans-serif; max-width: 520px; margin: auto;">
+        <h2 style="color: #dc2626;">Reserva rechazada</h2>
+        <p>Hola <strong>${nombre}</strong>, lamentablemente tu reserva fue rechazada.</p>
+        <table style="width:100%; border-collapse:collapse; margin-top:16px;">
+          <tr><td style="padding:6px 0; color:#555;">Cancha</td><td>${booking.court?.name || '-'}</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Fecha</td><td>${booking.date}</td></tr>
+          <tr><td style="padding:6px 0; color:#555;">Horario</td><td>${booking.startTime} – ${booking.endTime}</td></tr>
+          ${motivo ? `<tr><td style="padding:6px 0; color:#555;">Motivo</td><td>${motivo}</td></tr>` : ''}
+        </table>
+        <p style="margin-top:16px;">Si tenés dudas, contactá al complejo directamente.</p>
+        <p style="color:#888; font-size:13px;">PadelTime</p>
+      </div>
+    `,
+  });
+};
+
 export const sendBookingConfirmationEmail = async (booking) => {
   const player = booking.player;
   const court = booking.court;
