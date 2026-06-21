@@ -63,6 +63,9 @@ export const sendContactEmail = async ({ name, email, message }) => {
     to: process.env.CONTACT_RECEIVER_EMAIL,
     subject: 'Nuevo mensaje desde PadelTime',
     text: `Nombre: ${name}\n\nEmail: ${email}\n\nMensaje:\n${message}`,
+  });
+};
+
 export const sendBookingConfirmedByOwnerEmail = async (booking) => {
   const destinatario = booking.player?.email || booking.jugadorExterno?.email;
   const nombre = booking.player?.name ||
