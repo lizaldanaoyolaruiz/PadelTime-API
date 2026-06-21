@@ -1,12 +1,28 @@
 import { Router } from 'express';
-import { createBooking, getBookings, cancelBooking } from '../controllers/bookingController.js';
+import {
+  getSlots,
+  getBookings,
+  getBookingStats,
+  createBooking,
+  confirmarPago,
+  confirmarReserva,
+  rechazarReserva,
+  cancelarReserva,
+} from '../controllers/bookingController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { requireRole } from '../middlewares/roleMiddleware.js';
 
 const router = Router();
 
-router.post('/', protect, requireRole('player'), createBooking);
+router.get('/slots', getSlots);
+router.get('/stats', protect, requireRole('admin', 'superadmin'), getBookingStats);
+
 router.get('/', protect, getBookings);
-router.patch('/:id/cancel', protect, cancelBooking);
+router.post('/', protect, createBooking);
+
+router.patch('/:id/payment-success', confirmarPago);
+router.patch('/:id/confirm', protect, requireRole('admin', 'superadmin'), confirmarReserva);
+router.patch('/:id/reject', protect, requireRole('admin', 'superadmin'), rechazarReserva);
+router.patch('/:id/cancel', protect, cancelarReserva);
 
 export default router;

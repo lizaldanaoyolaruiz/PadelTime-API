@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './authRoutes.js';
+import maintenanceRoutes from './maintenanceRoutes.js';
+import favoriteRoutes from './favoriteRoutes.js';
 import complexRoutes from './complexRoutes.js';
 import courtRoutes from './courtRoutes.js';
 import bookingRoutes from './bookingRoutes.js';
@@ -25,5 +27,7 @@ router.use('/reviews', reviewRoutes);
 router.use("/metrics", metricsRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/contact', contactRoutes);
+router.use('/maintenance', maintenanceRoutes);
+router.use('/favorites', favoriteRoutes);
 
 export default router;
