@@ -9,6 +9,7 @@ import reviewRoutes from './reviewRoutes.js';
 import reportRoutes from './reportRoutes.js';
 import paymentRoutes from './paymentRoutes.js';
 import metricsRoutes from './metricsRoutes.js';
+import contactRoutes from './contactRoutes.js';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use('/reviews', reviewRoutes);
 //router.use('/reports', reportRoutes);
 router.use("/metrics", metricsRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/contact', contactRoutes);
 
 export default router;
