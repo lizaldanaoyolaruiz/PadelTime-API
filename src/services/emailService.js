@@ -8,6 +8,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
 
 const from = `"PadelTime" <${process.env.SMTP_USER}>`;
@@ -54,6 +57,12 @@ export const sendRejectionEmail = async (user, reason) => {
   });
 };
 
+export const sendContactEmail = async ({ name, email, message }) => {
+  await transporter.sendMail({
+    from,
+    to: process.env.CONTACT_RECEIVER_EMAIL,
+    subject: 'Nuevo mensaje desde PadelTime',
+    text: `Nombre: ${name}\n\nEmail: ${email}\n\nMensaje:\n${message}`,
 export const sendBookingConfirmedByOwnerEmail = async (booking) => {
   const destinatario = booking.player?.email || booking.jugadorExterno?.email;
   const nombre = booking.player?.name ||
