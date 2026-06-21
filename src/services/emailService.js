@@ -54,6 +54,15 @@ export const sendRejectionEmail = async (user, reason) => {
   });
 };
 
+export const sendContactEmail = async ({ name, email, message }) => {
+  await transporter.sendMail({
+    from,
+    to: process.env.CONTACT_RECEIVER_EMAIL,
+    subject: 'Nuevo mensaje desde PadelTime',
+    text: `Nombre: ${name}\n\nEmail: ${email}\n\nMensaje:\n${message}`,
+  });
+};
+
 export const sendBookingConfirmationEmail = async (booking) => {
   const player = booking.player;
   const court = booking.court;
