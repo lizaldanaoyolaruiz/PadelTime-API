@@ -70,15 +70,30 @@ export const getMetrics = async (startDate, endDate) => {
   },
   ]),
     Booking.aggregate([
-      { $match: filter },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-          reservas: { $sum: 1 },
-        },
+  { $match: filter },
+
+  {
+    $group: {
+      _id: { $hour: "$date" },
+      reservas: { $sum: 1 },
+    },
+  },
+
+  {
+    $project: {
+      _id: 0,
+      hora: {
+        $concat: [
+          { $toString: "$_id" },
+          ":00",
+        ],
       },
-      { $sort: { _id: 1 } },
-    ]),
+      reservas: 1,
+    },
+  },
+
+  { $sort: { hora: 1 } },
+]),
   ]);
 
   return {
