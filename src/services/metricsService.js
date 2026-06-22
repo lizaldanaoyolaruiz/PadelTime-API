@@ -56,7 +56,7 @@ export const getMetrics = async (startDate, endDate) => {
       { $limit: 5 },
     ]),
 
-    // 📊 RESERVAS POR DÍA (ANTES ESTABA MAL)
+    
     Booking.aggregate([
       { $match: filter },
       {
@@ -75,7 +75,7 @@ export const getMetrics = async (startDate, endDate) => {
       { $sort: { dia: 1 } },
     ]),
 
-    // ⏰ RESERVAS POR HORA (CORRECTO)
+
     Booking.aggregate([
       { $match: filter },
       {
