@@ -109,6 +109,16 @@ export const getPublicCourts = async (req, res) => {
   }
 };
 
+export const getPublicCourtById = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.id);
+    if (!court || !court.enabled) return res.status(404).json({ message: 'Court not found.' });
+    res.json({ court });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching court.', error: error.message });
+  }
+};
+
 
 export const getCourtsSchedule = async (req, res) => {
   try {
