@@ -1,5 +1,5 @@
 import Booking from '../models/Booking.js';
-
+import Court from '../models/Court.js'
 export const getMetrics = async (startDate, endDate) => {
   const filter = {};
 
@@ -16,6 +16,7 @@ export const getMetrics = async (startDate, endDate) => {
     seniasResult,
     rankingCanchas,
     reservasPorPeriodo,
+    reservasPorHora,
   ] = await Promise.all([
     Booking.countDocuments(filter),
     Booking.countDocuments({ ...filter, status: 'confirmed' }),
@@ -28,17 +29,68 @@ export const getMetrics = async (startDate, endDate) => {
       { $group: { _id: null, total: { $sum: '$depositAmount' } } },
     ]),
     Booking.aggregate([
-      { $match: filter },
-      { $group: { _id: '$court', reservas: { $sum: 1 } } },
+     { $match: filter },
+      {
+        $group: {
+          _id: '$court',
+          reservas: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: 'courts',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'court',
+        },
+      },
+      { $unwind: '$court' },
+      {
+        $project: {
+          _id: 0,
+          name: '$court.name',
+          reservas: 1,
+        },
+      },
       { $sort: { reservas: -1 } },
       { $limit: 5 },
     ]),
+
+    
     Booking.aggregate([
       { $match: filter },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+          _id: { $dayOfMonth: "$date" },
           reservas: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          dia: "$_id",
+          reservas: 1,
+        },
+      },
+      { $sort: { dia: 1 } },
+    ]),
+
+
+    Booking.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: { $hour: "$date" },
+          reservas: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          hora: {
+            $concat: [{ $toString: "$_id" }, ":00"],
+          },
+          reservas: 1,
         },
       },
       { $sort: { _id: 1 } },
