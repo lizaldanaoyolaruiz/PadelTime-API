@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema(
       enum: ['player', 'admin', 'superadmin'],
       default: 'player',
     },
+    complexId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref:'complex',
+      default: null,
+    },
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected'],
