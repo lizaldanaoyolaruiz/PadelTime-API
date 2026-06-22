@@ -28,11 +28,46 @@ export const getMetrics = async (startDate, endDate) => {
       { $group: { _id: null, total: { $sum: '$depositAmount' } } },
     ]),
     Booking.aggregate([
-      { $match: filter },
-      { $group: { _id: '$court', reservas: { $sum: 1 } } },
-      { $sort: { reservas: -1 } },
-      { $limit: 5 },
-    ]),
+  { $match: filter },
+
+  {
+    $group: {
+      _id: '$court',
+      reservas: { $sum: 1 },
+    },
+  },
+
+  {
+    $lookup: {
+      from: 'courts',
+      localField: '_id',
+      foreignField: '_id',
+      as: 'court',
+    },
+  },
+
+  {
+    $unwind: '$court',
+  },
+
+  {
+    $project: {
+      _id: 0,
+      name: '$court.name',
+      reservas: 1,
+    },
+  },
+
+  {
+    $sort: {
+      reservas: -1,
+    },
+  },
+
+  {
+    $limit: 5,
+  },
+  ]),
     Booking.aggregate([
       { $match: filter },
       {
