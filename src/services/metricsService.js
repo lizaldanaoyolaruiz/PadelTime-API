@@ -28,18 +28,8 @@ export const getMetrics = async (startDate, endDate) => {
       { $match: filter },
       { $group: { _id: null, total: { $sum: '$depositAmount' } } },
     ]),
-     Booking.aggregate([
-    { $match: filter },
-    { $group: { _id: '$court', reservas: { $sum: 1 } } },
-    { $lookup: { from: 'courts', localField: '_id', foreignField: '_id', as: 'court' } },
-    { $unwind: '$court' },
-    { $project: { _id: 0, name: '$court.name', reservas: 1 } },
-    { $sort: { reservas: -1 } },
-    { $limit: 5 },
-  ]),
-   //reserva por dia
     Booking.aggregate([
-      { $match: filter },
+     { $match: filter },
       {
         $group: {
           _id: '$court',
@@ -107,7 +97,6 @@ export const getMetrics = async (startDate, endDate) => {
     ]),
   ]);
 
-
   return {
     totalIngresos:     ingresosResult[0]?.total || 0,
     totalReservas,
@@ -117,6 +106,5 @@ export const getMetrics = async (startDate, endDate) => {
       : 0,
     rankingCanchas,
     reservasPorPeriodo,
-    reservasPorHora,
   };
 };
