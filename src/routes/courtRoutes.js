@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import {
-  createCourt, getCourtsByComplex, updateCourt, deleteCourt, getPublicCourts, getCourtsSchedule, updateCourtSchedule
+  createCourt, getCourtsByComplex, updateCourt, deleteCourt,
+  getPublicCourts, getPublicCourtById, getCourtsSchedule, updateCourtSchedule
 } from '../controllers/courtController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { requireRole } from '../middlewares/roleMiddleware.js';
