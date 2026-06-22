@@ -1,5 +1,5 @@
 const User = require('../models/user.model');
-
+const Booking = require('../models/booking.model');
 // GET /users
 const getUsers = async (req, res, next) => {
   try {
@@ -14,7 +14,34 @@ const getUsers = async (req, res, next) => {
     next(error);
   }
 };
+// GET /users/:id/full
+const getUserFullProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .populate('favorites.courtId');
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const bookings = await Booking.find({ userId: req.params.id })
+      .populate('courtId')
+      .sort({ date: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user,
+        bookings,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 // GET /users/:id
 const getUserById = async (req, res, next) => {
   try {
@@ -146,4 +173,5 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
+  getUserFullProfile,
 };
