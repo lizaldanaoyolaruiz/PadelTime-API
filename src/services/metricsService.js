@@ -16,6 +16,7 @@ export const getMetrics = async (startDate, endDate) => {
     seniasResult,
     rankingCanchas,
     reservasPorPeriodo,
+    reservasPorHora,
   ] = await Promise.all([
     Booking.countDocuments(filter),
     Booking.countDocuments({ ...filter, status: 'confirmed' }),
