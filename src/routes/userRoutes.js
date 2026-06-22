@@ -10,14 +10,14 @@ const {
   getUserFullProfile,
 } = require('../controllers/user.controller');
 
-// 👤 CRUD usuarios
+//CRUD usuarios
 router.get('/', getUsers);
 router.get('/:id', getUserById);
 router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
 
-// 🔥 PERFIL COMPLETO (panel de clientes)
+// PERFIL COMPLETO (panel de clientes)
 router.get('/:id/full', getUserFullProfile);
 
 module.exports = router;
