@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import {
-  createCourt, getCourtsByComplex, updateCourt, deleteCourt, getPublicCourts, getPublicCourtById,
+  createCourt, getCourtsByComplex, updateCourt, deleteCourt, getPublicCourts, getCourtsSchedule, updateCourtSchedule
 } from '../controllers/courtController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { requireRole } from '../middlewares/roleMiddleware.js';
@@ -23,5 +23,7 @@ router.post('/', protect, requireRole('admin', 'superadmin'), uploadSingle, cour
 router.get('/', protect, requireRole('admin', 'superadmin'), getCourtsByComplex);
 router.put('/:id', protect, requireRole('admin', 'superadmin'), uploadSingle, courtRules, validate, updateCourt);
 router.delete('/:id', protect, requireRole('admin', 'superadmin'), deleteCourt);
+router.get('/schedule', protect, requireRole('admin', 'superadmin'), getCourtsSchedule);
+router.put('/:courtId/schedule', protect, requireRole('admin', 'superadmin'), updateCourtSchedule);
 
 export default router;

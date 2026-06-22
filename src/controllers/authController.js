@@ -10,6 +10,7 @@ const formatUser = (user) => ({
   role: user.role,
   status: user.status,
   isVerified: user.isVerified,
+  ...(user.complexId && {complexId: user.complexId})
 });
 
 export const register = async (req, res) => {
