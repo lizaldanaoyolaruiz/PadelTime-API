@@ -1,6 +1,7 @@
 import { Readable } from 'stream';
 import cloudinary from '../config/cloudinary.js';
 import Court from '../models/Court.js';
+import Blockout from '../models/Blockout.js';
 import Complex from '../models/Complex.js';
 
 const uploadImage = (buffer, folder) =>
@@ -108,17 +109,119 @@ export const getPublicCourts = async (req, res) => {
   }
 };
 
-export const getPublicCourtById = async (req, res) => {
+
+export const getCourtsSchedule = async (req, res) => {
   try {
-    const court = await Court.findById(req.params.id)
-      .populate('complex', 'name whatsapp openTime closeTime depositPercentage')
-      .lean();
+    let complexId;
+    if (req.user.role === 'superadmin') {
+      if (!req.query.complexId) {
+        return res.status(400).json({ message: 'Se requiere complexId en query para superadmin' });
+      }
+      complexId = req.query.complexId;
+    } else {
+     
+      complexId = req.user.complexId;
+      if (!complexId) {
+        return res.status(403).json({ message: 'Usuario sin complejo asignado' });
+      }
+      
+      const complex = await getComplexIfOwner(complexId, req.user._id, req.user.role);
+      if (!complex) {
+        return res.status(403).json({ message: 'No autorizado para este complejo' });
+      }
+    }
 
-    if (!court) return res.status(404).json({ message: 'Cancha no encontrada.' });
-    if (!court.enabled) return res.status(400).json({ message: 'La cancha no está disponible.' });
+    
+    const courts = await Court.find({ complex: complexId }).sort({ createdAt: 1 });
+    
+    const Blockout = (await import('../models/Blockout.js')).default;
+    const blockouts = await Blockout.find({ complexId, isActive: true });
 
-    res.json({ court });
+    
+    const result = courts.map(court => {
+      
+      const courtBlocks = blockouts.filter(
+        b => !b.courtId || b.courtId.toString() === court._id.toString()
+      );
+
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => ({
+        day,
+        openTime: court.schedule?.[day]?.start || '--',
+        closeTime: court.schedule?.[day]?.end || '--',
+        active: court.schedule?.[day]?.enabled ?? false,
+      }));
+
+      return {
+        courtId: court._id,
+        courtName: court.name,
+        active: court.enabled ?? true,
+        days,
+        blocks: courtBlocks.map(b => ({
+          id: b._id,
+          name: b.name,
+          recurrence: b.recurrence,
+          day: b.dayOfWeek,
+          startTime: b.startTime,
+          endTime: b.endTime,
+        })),
+        
+      };
+    });
+
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener la cancha.', error: error.message });
+    res.status(500).json({ message: 'Error al obtener horarios.', error: error.message });
+  }
+};
+
+export const updateCourtSchedule = async (req, res) => {
+  try {
+    const { id: courtId } = req.params;
+    const { active, days } = req.body;
+
+    const court = await Court.findById(courtId);
+    if (!court) {
+      return res.status(404).json({ message: 'Cancha no encontrada.' });
+    }
+
+    
+    let complexId;
+    if (req.user.role === 'superadmin') {
+      if (!req.body.complexId) {
+        return res.status(400).json({ message: 'Se requiere complexId para superadmin' });
+      }
+      complexId = req.body.complexId;
+    } else {
+      complexId = req.user.complexId;
+    }
+
+    if (req.user.role !== 'superadmin') {
+      const complex = await getComplexIfOwner(complexId, req.user._id, req.user.role);
+      if (!complex) {
+        return res.status(403).json({ message: 'No autorizado para modificar esta cancha' });
+      }
+    }
+
+    
+    if (court.complex.toString() !== complexId.toString()) {
+      return res.status(403).json({ message: 'La cancha no pertenece a este complejo' });
+    }
+
+    const schedule = {};
+    days.forEach(d => {
+      schedule[d.day] = {
+        enabled: d.active,
+        start: d.openTime,
+        end: d.closeTime
+      };
+    });
+
+    court.schedule = schedule;
+    court.enabled = active;
+    await court.save();
+
+    res.json({ message: 'Horarios actualizados correctamente.', court });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar horarios.', error: error.message });
   }
 };
