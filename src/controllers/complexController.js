@@ -328,3 +328,41 @@ export const deleteComplex = async (req, res) => {
     res.status(500).json({ message: 'Internal server error.' });
   }
 };
+
+export const getConfig = async (req, res) => {
+  try {
+    const { complexId } = req.params;
+    const complex = await Complex.findById(complexId);
+    if (!complex) {
+      return res.status(404).json({ message: 'Complejo no encontrado' });
+    }
+    res.json({
+      onlineStatus: complex.onlineStatus ?? true,
+      publicBookingEnabled: complex.publicBookingEnabled ?? true,
+      openTime: complex.openTime || '08:00 AM',
+      closeTime: complex.closeTime || '11:00 PM',
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateConfig = async (req, res) => {
+  try {
+    const { complexId } = req.params;
+    const { onlineStatus, publicBookingEnabled, openTime, closeTime } = req.body;
+
+    // Validar permisos según rol (similar a otros controladores)
+    const complex = await Complex.findByIdAndUpdate(
+      complexId,
+      { onlineStatus, publicBookingEnabled, openTime, closeTime },
+      { new: true, runValidators: true }
+    );
+    if (!complex) {
+      return res.status(404).json({ message: 'Complejo no encontrado' });
+    }
+    res.json(complex);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
