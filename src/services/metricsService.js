@@ -105,5 +105,6 @@ export const getMetrics = async (startDate, endDate) => {
       : 0,
     rankingCanchas,
     reservasPorPeriodo,
+    reservasPorHora,
   };
 };
