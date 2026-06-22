@@ -11,6 +11,7 @@ import {
 import { protect } from '../middlewares/authMiddleware.js';
 import { requireRole } from '../middlewares/roleMiddleware.js';
 import { uploadMultiple } from '../middlewares/uploadMiddleware.js';
+import { getConfig, updateConfig } from '../controllers/complexController.js';
 import validate from '../middlewares/validateMiddleware.js';
 
 const router = Router();
@@ -52,5 +53,7 @@ router.patch('/:id/featured', protect, requireRole('superadmin'), toggleFeatured
 router.patch('/:id/approve', protect, requireRole('superadmin'), approveComplex);
 router.patch('/:id/reject', protect, requireRole('superadmin'), [body('reason').optional().trim()], validate, rejectComplex);
 router.patch('/:id/suspend', protect, requireRole('superadmin'), [body('reason').optional().trim()], validate, suspendComplex);
+router.get('/:complexId/config', protect, requireRole('admin', 'superadmin'), getConfig);
+router.put('/:complexId/config', protect, requireRole('admin', 'superadmin'), updateConfig);
 
 export default router;
