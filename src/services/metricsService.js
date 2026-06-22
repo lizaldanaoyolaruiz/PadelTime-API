@@ -37,93 +37,76 @@ export const getMetrics = async (startDate, endDate) => {
     { $sort: { reservas: -1 } },
     { $limit: 5 },
   ]),
-    reservasPorPeriodoPromise,
-   Booking.aggregate([
-    { $match: filter },
-    {
-      $group: {
-        _id: { $hour: "$date" },
-        reservas: { $sum: 1 },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        hora: {
-          $concat: [{ $toString: "$_id" }, ":00"],
+   //reserva por dia
+    Booking.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: '$court',
+          reservas: { $sum: 1 },
         },
-        reservas: 1,
       },
-    },
-    { $sort: { _id: 1 } },
-]),
-    Booking.aggregate([
-  { $match: filter },
-
-  {
-    $group: {
-      _id: '$court',
-      reservas: { $sum: 1 },
-    },
-  },
-
-  {
-    $lookup: {
-      from: 'courts',
-      localField: '_id',
-      foreignField: '_id',
-      as: 'court',
-    },
-  },
-
-  {
-    $unwind: '$court',
-  },
-
-  {
-    $project: {
-      _id: 0,
-      name: '$court.name',
-      reservas: 1,
-    },
-  },
-
-  {
-    $sort: {
-      reservas: -1,
-    },
-  },
-
-  {
-    $limit: 5,
-  },
-  ]),
-    Booking.aggregate([
-  { $match: filter },
-
-  {
-    $group: {
-      _id: { $hour: "$date" },
-      reservas: { $sum: 1 },
-    },
-  },
-
-  {
-    $project: {
-      _id: 0,
-      hora: {
-        $concat: [
-          { $toString: "$_id" },
-          ":00",
-        ],
+      {
+        $lookup: {
+          from: 'courts',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'court',
+        },
       },
-      reservas: 1,
-    },
-  },
+      { $unwind: '$court' },
+      {
+        $project: {
+          _id: 0,
+          name: '$court.name',
+          reservas: 1,
+        },
+      },
+      { $sort: { reservas: -1 } },
+      { $limit: 5 },
+    ]),
 
-  { $sort: { hora: 1 } },
-]),
+    // 📊 RESERVAS POR DÍA (ANTES ESTABA MAL)
+    Booking.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: { $dayOfMonth: "$date" },
+          reservas: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          dia: "$_id",
+          reservas: 1,
+        },
+      },
+      { $sort: { dia: 1 } },
+    ]),
+
+    // ⏰ RESERVAS POR HORA (CORRECTO)
+    Booking.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: { $hour: "$date" },
+          reservas: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          hora: {
+            $concat: [{ $toString: "$_id" }, ":00"],
+          },
+          reservas: 1,
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]),
   ]);
+
 
   return {
     totalIngresos:     ingresosResult[0]?.total || 0,
