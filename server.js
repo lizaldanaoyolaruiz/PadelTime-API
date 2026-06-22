@@ -7,7 +7,7 @@ import routes from './src/routes/index.js';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-const userRoutes = require('./routes/user.routes');
+const userRoutes = require('./routes/userRoutes.js');
 
 app.use('/users', userRoutes);
 app.use(cors());
