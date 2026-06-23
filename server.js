@@ -8,11 +8,12 @@ import userRoutes from './src/routes/userRoutes.js';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use('/users', userRoutes);
 app.use(cors());
 app.use(express.json());
 
+app.use('/users', userRoutes);
 app.use('/api', routes);
+
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found.' });
