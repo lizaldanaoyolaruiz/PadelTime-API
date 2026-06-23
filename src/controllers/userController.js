@@ -1,5 +1,5 @@
-const User = require('../models/user.model');
-
+import User from '../models/User.js';
+import Booking from '../models/Booking.js';
 // GET /users
 const getUsers = async (req, res, next) => {
   try {
@@ -14,7 +14,35 @@ const getUsers = async (req, res, next) => {
     next(error);
   }
 };
+// GET /users/:id/full
+const getUserFullProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .populate('favoritos');
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const bookings = await Booking.find({ userId: req.params.id })
+      .populate('court')
+      .populate('complex')
+      .sort({ date: -1 });
+      console.log("BOOKINGS:", bookings);
+    res.status(200).json({
+      success: true,
+      data: {
+        user,
+        bookings,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 // GET /users/:id
 const getUserById = async (req, res, next) => {
   try {
@@ -140,10 +168,11 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
+  getUserFullProfile,
 };
