@@ -71,7 +71,7 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
     });
 
     const disponibles = available.map(c => {
-      const bookingUrl = `${FRONTEND_URL}/reservar?courtId=${c._id}&complexId=${complexId}&date=${date}&startTime=${startTime}&endTime=${endTime}`;
+      const bookingUrl = `${FRONTEND_URL}/confirmacion?courtId=${c._id}&complexId=${complexId}&date=${date}&startTime=${startTime}&endTime=${endTime}`;
       const waText = whatsappNum
         ? encodeURIComponent(
             `Hola! Quiero reservar ${c.name} (${c.type === 'crystal' ? 'cristal' : 'panorámica'}) el ${fechaFormateada} de ${startTime} a ${endTime}. ¿Tienen disponibilidad?`
