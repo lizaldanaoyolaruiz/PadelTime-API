@@ -43,6 +43,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    avatar: {
+      type: String,
+      default: '',
+    },
     isVerified: { type: Boolean, default: false },
     verificationToken: { type: String, select: false },
     favoritos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Complex' }],
