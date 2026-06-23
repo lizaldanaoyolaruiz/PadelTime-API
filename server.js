@@ -3,11 +3,10 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from './src/config/db.js';
 import routes from './src/routes/index.js';
+import userRoutes from './src/routes/userRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-
-const userRoutes = require('./routes/userRoutes.js');
 
 app.use('/users', userRoutes);
 app.use(cors());
