@@ -35,8 +35,13 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
+      enum: ['pending', 'approved', 'rejected', 'suspended'],
       default: 'pending',
+    },
+    location: {
+      type: String,
+      trim: true,
+      default: '',
     },
     isVerified: { type: Boolean, default: false },
     verificationToken: { type: String, select: false },
