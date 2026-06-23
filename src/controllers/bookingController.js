@@ -331,7 +331,12 @@ export const getBookingStats = async (req, res) => {
       reservas.filter((r) => r.player).map((r) => r.player.toString())
     ).size;
 
-    return res.json({ occupancyRate, estimatedRevenue, newPlayers: jugadoresUnicos });
+    return res.json({
+      occupancyRate,
+      estimatedRevenue,
+      newPlayers: jugadoresUnicos,
+      totalBookings: reservas.length,
+    });
   } catch (error) {
     return res.status(500).json({ message: 'Error al obtener estadísticas.', error: error.message });
   }
