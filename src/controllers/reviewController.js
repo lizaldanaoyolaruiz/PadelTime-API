@@ -3,11 +3,11 @@ import Review from '../models/Review.js';
 import Booking from '../models/Booking.js';
 import Complex from '../models/Complex.js';
 
-const REVIEWABLE_STATUSES = ['confirmed', 'completed'];
+const REVIEWABLE_STATUSES = ['pending', 'confirmed', 'completed'];
 
 const recalculateComplexRating = async (complexId) => {
   const stats = await Review.aggregate([
-    { $match: { complex: complexId } },
+    { $match: { complex: new mongoose.Types.ObjectId(complexId) } },
     { $group: { _id: '$complex', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
   ]);
 
