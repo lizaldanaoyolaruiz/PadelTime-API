@@ -5,7 +5,6 @@ const blockoutSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'complejo',
         required: true,
-        unique: true,
     },
     courtId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -15,13 +14,17 @@ const blockoutSchema = new mongoose.Schema({
     name: { type: String, required: true},
     recurrence : {
         type: String,
-        enum: ['daily', 'weekly'],
+        enum: ['daily', 'weekly', 'once'],
         required: true
     },
     dayOfWeek: {
         type: String,
         enum: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'],
-        default: true
+        default: null
+    },
+    date: {
+        type: String, // YYYY-MM-DD, solo para recurrence 'once'
+        default: null
     },
     startTime:{type: String, required: true},
     endTime:{type: String, required: true},
