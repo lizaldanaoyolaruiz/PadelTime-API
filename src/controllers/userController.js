@@ -1,5 +1,5 @@
-import User from '../models/user.model.js';
-import Booking from '../models/booking.model.js';
+import User from '../models/User.js';
+import Booking from '../models/Booking.js';
 // GET /users
 const getUsers = async (req, res, next) => {
   try {
@@ -18,7 +18,7 @@ const getUsers = async (req, res, next) => {
 const getUserFullProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id)
-      .populate('favorites.courtId');
+      .populate('favoritos');
 
     if (!user) {
       return res.status(404).json({
@@ -28,9 +28,10 @@ const getUserFullProfile = async (req, res, next) => {
     }
 
     const bookings = await Booking.find({ userId: req.params.id })
-      .populate('courtId')
+      .populate('court')
+      .populate('complex')
       .sort({ date: -1 });
-
+      console.log("BOOKINGS:", bookings);
     res.status(200).json({
       success: true,
       data: {
