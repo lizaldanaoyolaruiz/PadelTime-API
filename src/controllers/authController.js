@@ -1,5 +1,16 @@
 import crypto from 'crypto';
+import { Readable } from 'stream';
 import User from '../models/User.js';
+import cloudinary from '../config/cloudinary.js';
+
+const uploadToCloudinary = (buffer, folder) =>
+  new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, width: 400, height: 400, crop: 'fill' },
+      (error, result) => { if (error) return reject(error); resolve(result); }
+    );
+    Readable.from(buffer).pipe(stream);
+  });
 import generateToken from '../utils/generateToken.js';
 import { sendVerificationEmail } from '../services/emailService.js';
 
@@ -10,7 +21,8 @@ const formatUser = (user) => ({
   role: user.role,
   status: user.status,
   isVerified: user.isVerified,
-  ...(user.complexId && {complexId: user.complexId})
+  avatar: user.avatar || '',
+  ...(user.complexId && { complexId: user.complexId }),
 });
 
 export const register = async (req, res) => {
@@ -91,4 +103,48 @@ export const login = async (req, res) => {
 
 export const getMe = async (req, res) => {
   res.json({ user: formatUser(req.user) });
+};
+
+export const updateMe = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+    if (name)  user.name  = name;
+    if (email) user.email = email.toLowerCase();
+    if (password) user.password = password; // pre-save hook hashea
+
+    await user.save();
+    res.json({ user: formatUser(user) });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar el perfil.', error: error.message });
+  }
+};
+
+export const deleteMe = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.user._id);
+    res.json({ message: 'Cuenta eliminada correctamente.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar la cuenta.', error: error.message });
+  }
+};
+
+export const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No se recibió ninguna imagen.' });
+
+    const result = await uploadToCloudinary(req.file.buffer, 'padeltime/avatars');
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar: result.secure_url },
+      { new: true }
+    );
+
+    res.json({ user: formatUser(user) });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al subir la imagen.', error: error.message });
+  }
 };
