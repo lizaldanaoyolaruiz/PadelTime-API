@@ -8,6 +8,8 @@ import {
   confirmarReserva,
   rechazarReserva,
   cancelarReserva,
+  editarReserva,
+  eliminarReserva,
 } from '../controllers/bookingController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { requireRole } from '../middlewares/roleMiddleware.js';
@@ -24,5 +26,7 @@ router.patch('/:id/payment-success', confirmarPago);
 router.patch('/:id/confirm', protect, requireRole('admin', 'superadmin'), confirmarReserva);
 router.patch('/:id/reject', protect, requireRole('admin', 'superadmin'), rechazarReserva);
 router.patch('/:id/cancel', protect, cancelarReserva);
+router.patch('/:id',        protect, editarReserva);
+router.delete('/:id',       protect, eliminarReserva);
 
 export default router;
