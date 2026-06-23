@@ -1,23 +1,25 @@
-const express = require('express');
-const router = express.Router();
+import express from 'express';
 
-const {
+import {
   getUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
   getUserFullProfile,
-} = require('../controllers/user.controller');
+} from '../controllers/user.controller.js';
 
-//CRUD usuarios
+const router = express.Router();
+
+// CRUD usuarios
 router.get('/', getUsers);
+
+// PERFIL COMPLETO
+router.get('/:id/full', getUserFullProfile);
+
 router.get('/:id', getUserById);
 router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
 
-// PERFIL COMPLETO (panel de clientes)
-router.get('/:id/full', getUserFullProfile);
-
-module.exports = router;
+export default router;
