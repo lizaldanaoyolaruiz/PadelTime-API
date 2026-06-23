@@ -19,6 +19,11 @@ const getDiaSemana = (fechaStr) => {
   return dias[d.getUTCDay()];
 };
 
+const DIA_A_SCHEDULE = {
+  lunes: 'monday', martes: 'tuesday', miercoles: 'wednesday',
+  jueves: 'thursday', viernes: 'friday', sabado: 'saturday', domingo: 'sunday',
+};
+
 const generarFechas = (from, to) => {
   const fechas = [];
   const actual = new Date(from + 'T00:00:00Z');
@@ -71,8 +76,15 @@ export const getSlots = async (req, res) => {
 
     for (const fecha of fechas) {
       const diaSemana = getDiaSemana(fecha);
+      const scheduleKey = DIA_A_SCHEDULE[diaSemana];
+      const daySchedule = cancha.schedule?.[scheduleKey];
 
-      for (let hora = 7; hora <= 22; hora++) {
+      if (!daySchedule?.enabled) continue;
+
+      const startHour = parseInt(daySchedule.start?.split(':')[0] ?? 7);
+      const endHour = parseInt(daySchedule.end?.split(':')[0] ?? 22);
+
+      for (let hora = startHour; hora < endHour; hora++) {
         const horaStr = padHour(hora);
         const horaFinStr = padHour(hora + 1);
 
@@ -81,17 +93,29 @@ export const getSlots = async (req, res) => {
         );
 
         let statusSlot;
+        let blockoutInfo = null;
         if (reservaEnSlot) {
           statusSlot = reservaEnSlot.status === 'confirmed' ? 'reservado' : 'pendiente';
         } else {
-          const enMantenimientoPuntual = mantenimientos.some(
+          const matchedMaint = mantenimientos.find(
             (m) => m.date === fecha && m.startTime < horaFinStr && m.endTime > horaStr
           );
-          const enMantenimientoRecurrente = !enMantenimientoPuntual && blockouts.some((b) => {
-            if (b.recurrence === 'weekly' && b.dayOfWeek !== diaSemana) return false;
-            return b.startTime < horaFinStr && b.endTime > horaStr;
-          });
-          statusSlot = (enMantenimientoPuntual || enMantenimientoRecurrente) ? 'mantenimiento' : 'disponible';
+          if (matchedMaint) {
+            statusSlot = 'mantenimiento';
+            blockoutInfo = { name: 'Mantenimiento', start: matchedMaint.startTime, end: matchedMaint.endTime };
+          } else {
+            const matchedBlockout = blockouts.find((b) => {
+              if (b.recurrence === 'once') return b.date === fecha && b.startTime < horaFinStr && b.endTime > horaStr;
+              if (b.recurrence === 'weekly' && b.dayOfWeek !== diaSemana) return false;
+              return b.startTime < horaFinStr && b.endTime > horaStr;
+            });
+            if (matchedBlockout) {
+              statusSlot = 'mantenimiento';
+              blockoutInfo = { name: matchedBlockout.name, start: matchedBlockout.startTime, end: matchedBlockout.endTime };
+            } else {
+              statusSlot = 'disponible';
+            }
+          }
         }
 
         const statusFinal =
@@ -99,12 +123,9 @@ export const getSlots = async (req, res) => {
             ? 'reservado'
             : statusSlot;
 
-        slots.push({
-          courtId,
-          date: fecha,
-          hour: hora,
-          status: statusFinal,
-        });
+        const slot = { courtId, date: fecha, hour: hora, status: statusFinal };
+        if (blockoutInfo && statusFinal === 'mantenimiento') slot.blockout = blockoutInfo;
+        slots.push(slot);
       }
     }
 
