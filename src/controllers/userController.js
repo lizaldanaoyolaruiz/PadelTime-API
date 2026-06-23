@@ -1,5 +1,5 @@
-const User = require('../models/user.model.js');
-const Booking = require('../models/booking.model.js');
+import User from '../models/user.model.js';
+import Booking from '../models/booking.model.js';
 // GET /users
 const getUsers = async (req, res, next) => {
   try {
@@ -167,7 +167,7 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
-exports = {
+export {
   getUsers,
   getUserById,
   createUser,
