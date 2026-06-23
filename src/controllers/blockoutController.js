@@ -15,9 +15,9 @@ async function getBlockouts(req, res) {
     } else {
       complexId = req.user.complexId;
       if (!complexId) {
-        return res.status(403).json({
-          massage: "El usuario no tiene el complejo asignado",
-        });
+        const owned = await Complex.findOne({ owner: req.user._id });
+        if (!owned) return res.status(403).json({ message: 'Usuario sin complejo asignado' });
+        complexId = owned._id;
       }
     }
     const blockouts = await Blockout.find({ complexId });
@@ -42,35 +42,35 @@ async function createBlockout(req, res) {
     } else {
       complexId = req.user.complexId;
       if (!complexId) {
-        return res.status(403).json({
-          message: "El usuario no tiene complejo asignado",
-        });
+        const owned = await Complex.findOne({ owner: req.user._id });
+        if (!owned) return res.status(403).json({ message: 'Usuario sin complejo asignado' });
+        complexId = owned._id;
       }
     }
-    const { name, recurrence, dayOfWeek, startTime, endTime, courtId } =
+    const { name, recurrence, dayOfWeek, date, startTime, endTime, courtId } =
       req.body;
     if (!name || !recurrence || !startTime || !endTime) {
       return res.status(400).json({
-        massage:
-          "Faltan campos obligatorios (name, recurrence, startTime, endTime)",
+        message: "Faltan campos obligatorios (name, recurrence, startTime, endTime)",
       });
     }
     if (recurrence === "weekly" && !dayOfWeek) {
       return res.status(400).json({
-        massage: "Para bloqueos semanales, dayOfWeek es obligatorio",
+        message: "Para bloqueos semanales, dayOfWeek es obligatorio",
+      });
+    }
+    if (recurrence === "once" && !date) {
+      return res.status(400).json({
+        message: "Para bloqueos de fecha específica, date es obligatorio (YYYY-MM-DD)",
       });
     }
     if (courtId) {
       const court = await Court.findById(courtId);
       if (!court) {
-        return res.status(403).json({
-          message: "La cancha no existe",
-        });
+        return res.status(403).json({ message: "La cancha no existe" });
       }
       if (court.complex.toString() !== complexId.toString()) {
-        return res.status(400).json({
-          message: "La cancha no pertenece a este complejo",
-        });
+        return res.status(400).json({ message: "La cancha no pertenece a este complejo" });
       }
     }
     const blockouts = await Blockout.create({
@@ -78,6 +78,7 @@ async function createBlockout(req, res) {
       name,
       recurrence,
       dayOfWeek: recurrence === "weekly" ? dayOfWeek : null,
+      date: recurrence === "once" ? date : null,
       startTime,
       endTime,
       courtId: courtId || null,
@@ -101,10 +102,9 @@ async function updateBlockout(req, res) {
         massage: "Bloqueo no encontrado",
       });
     }
-    if (req.user.role === "owner") {
-      if (
-        existBlockout.complexId.toString() !== req.user.complexId.toString()
-      ) {
+    if (req.user.role === "admin") {
+      const userComplexId = req.user.complexId || (await Complex.findOne({ owner: req.user._id }))?._id;
+      if (!userComplexId || existBlockout.complexId.toString() !== userComplexId.toString()) {
         return res.status(403).json({
           massage: "No tienes permiso para modificar este bloqueo",
         });
@@ -127,6 +127,7 @@ async function updateBlockout(req, res) {
       "name",
       "recurrence",
       "dayOfWeek",
+      "date",
       "startTime",
       "endTime",
       "courtId",
@@ -146,12 +147,12 @@ async function updateBlockout(req, res) {
         return res.status(400).json({ message: 'La cancha no existe' });
       }
      
-      const finalComplexId = updateData.complexId || existingBlockout.complexId;
-      if (court.complexId.toString() !== finalComplexId.toString()) {
+      const finalComplexId = updateData.complexId || existBlockout.complexId;
+      if (court.complex.toString() !== finalComplexId.toString()) {
         return res.status(400).json({ message: 'La cancha no pertenece a este complejo' });
       }
     }
-    const updatedBlockout = await Blockout.findByIdAndUpdate(id, updtaes, {
+    const updatedBlockout = await Blockout.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -172,8 +173,9 @@ export const deleteBlockout = async (req, res) => {
       return res.status(404).json({ message: 'Bloqueo no encontrado' });
     }
 
-    if (req.user.role === 'owner') {
-      if (existingBlockout.complexId.toString() !== req.user.complexId.toString()) {
+    if (req.user.role === 'admin') {
+      const userComplexId = req.user.complexId || (await Complex.findOne({ owner: req.user._id }))?._id;
+      if (!userComplexId || existingBlockout.complexId.toString() !== userComplexId.toString()) {
         return res.status(403).json({ message: 'No tienes permiso para eliminar este bloqueo' });
       }
     } else if (req.user.role !== 'superadmin') {
@@ -187,9 +189,8 @@ export const deleteBlockout = async (req, res) => {
   }
 };
 
-export{
+export {
     getBlockouts,
     createBlockout,
-    updateBlockout,
-    deleteBlockout
+    updateBlockout
 }
