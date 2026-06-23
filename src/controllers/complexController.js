@@ -2,6 +2,7 @@ import { Readable } from 'stream';
 import mongoose from 'mongoose';
 import cloudinary from '../config/cloudinary.js';
 import Complex from '../models/Complex.js';
+import Court from '../models/Court.js';
 import ActivityLog from '../models/ActivityLog.js';
 import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
 
@@ -45,12 +46,87 @@ export const getFeaturedComplexes = async (req, res) => {
 
 export const getPublicComplexes = async (req, res) => {
   try {
-    const complexes = await Complex.find({ status: 'approved' })
-      .select('name location city price ratingAverage ratingCount photos image description openTime closeTime');
+    const complejos = await Complex.find({ status: 'approved' })
+      .select('name location city price ratingAverage ratingCount photos image description openTime closeTime')
+      .lean();
 
-    res.json({ complexes });
+    if (complejos.length === 0) {
+      return res.json({ complexes: [] });
+    }
+
+    // Traer todas las canchas habilitadas de esos complejos
+    const ids = complejos.map(c => c._id);
+    const canchas = await Court.find({ complex: { $in: ids }, enabled: true })
+      .select('complex type features pricePerHour schedule')
+      .lean();
+
+    // Agrupar canchas por complejo
+    const canchasPorComplejo = {};
+    for (const cancha of canchas) {
+      const id = cancha.complex.toString();
+      if (!canchasPorComplejo[id]) canchasPorComplejo[id] = [];
+      canchasPorComplejo[id].push(cancha);
+    }
+
+    const tipoEnEspanol = { crystal: 'Cristal', panoramic: 'Panorámica' };
+
+    // Devuelve las franjas horarias que cubre una cancha según su horario
+    const getFranjasDeCancha = (cancha) => {
+      const franjas = [];
+      const dias = Object.values(cancha.schedule || {});
+
+      for (const dia of dias) {
+        if (!dia?.enabled) continue;
+        const inicio = parseInt(dia.start?.split(':')[0] || '0', 10);
+        const fin = parseInt(dia.end?.split(':')[0] || '0', 10);
+
+        if (inicio < 12 && fin > 6 && !franjas.includes('Mañana')) franjas.push('Mañana');
+        if (inicio < 18 && fin > 12 && !franjas.includes('Tarde')) franjas.push('Tarde');
+        if (inicio < 24 && fin > 18 && !franjas.includes('Noche')) franjas.push('Noche');
+        if (inicio < 6 && !franjas.includes('Madrugada')) franjas.push('Madrugada');
+      }
+      return franjas;
+    };
+
+    // Armar la respuesta enriquecida con datos de canchas
+    const resultado = complejos.map(complejo => {
+      const canchasDelComplejo = canchasPorComplejo[complejo._id.toString()] || [];
+
+      // Precio mínimo entre las canchas del complejo
+      const precios = canchasDelComplejo
+        .filter(c => c.pricePerHour > 0)
+        .map(c => c.pricePerHour);
+      const precioPorHora = precios.length > 0 ? Math.min(...precios) : (complejo.price || 0);
+
+      // Features únicas de todas las canchas
+      const features = [];
+      for (const cancha of canchasDelComplejo) {
+        for (const feature of (cancha.features || [])) {
+          if (!features.includes(feature)) features.push(feature);
+        }
+      }
+
+      // Tipos de cancha únicos traducidos al español
+      const courtTypes = [];
+      for (const cancha of canchasDelComplejo) {
+        const tipo = tipoEnEspanol[cancha.type] || cancha.type;
+        if (!courtTypes.includes(tipo)) courtTypes.push(tipo);
+      }
+
+      // Franjas horarias disponibles en el complejo
+      const franjas = [];
+      for (const cancha of canchasDelComplejo) {
+        for (const franja of getFranjasDeCancha(cancha)) {
+          if (!franjas.includes(franja)) franjas.push(franja);
+        }
+      }
+
+      return { ...complejo, precioPorHora, features, courtTypes, franjas };
+    });
+
+    res.json({ complexes: resultado });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching complexes.', error: error.message });
+    res.status(500).json({ message: 'Error al obtener los complejos.', error: error.message });
   }
 };
 
