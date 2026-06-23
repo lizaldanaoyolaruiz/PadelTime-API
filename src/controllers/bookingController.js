@@ -155,7 +155,7 @@ export const getBookings = async (req, res) => {
 
     const reservas = await Booking.find(filtro)
       .populate('court', '_id name')
-      .populate('complex', '_id whatsapp')
+      .populate('complex', '_id name image city whatsapp')
       .populate('player', '_id name')
       .sort({ createdAt: -1 })
       .lean();
@@ -475,3 +475,92 @@ export const cancelarReserva = async (req, res) => {
     return res.status(500).json({ message: 'Error al cancelar la reserva.', error: error.message });
   }
 };
+
+// ── EDITAR RESERVA (jugador) ───────────────────────────────────────────────────
+
+export const editarReserva = async (req, res) => {
+  try {
+    const reserva = await Booking.findById(req.params.id);
+    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+
+    const esJugadorDueno =
+      req.user.role === 'player' && reserva.player && reserva.player.equals(req.user._id);
+    const esAdmin = ['admin', 'superadmin'].includes(req.user.role);
+
+    if (!esJugadorDueno && !esAdmin) {
+      return res.status(403).json({ message: 'Acceso denegado.' });
+    }
+
+    if (!['pending', 'confirmed'].includes(reserva.status)) {
+      return res.status(400).json({ message: 'Solo se pueden editar reservas pendientes o confirmadas.' });
+    }
+
+    const { date, startTime, endTime } = req.body;
+
+    if (!date || !startTime || !endTime) {
+      return res.status(400).json({ message: 'Se requieren fecha, hora de inicio y hora de fin.' });
+    }
+
+    if (startTime >= endTime) {
+      return res.status(400).json({ message: 'La hora de inicio debe ser anterior a la hora de fin.' });
+    }
+
+    const fechaHoraInicio = new Date(`${date}T${startTime}:00`);
+    if (fechaHoraInicio <= new Date()) {
+      return res.status(400).json({ message: 'No se puede reservar en una fecha pasada.' });
+    }
+
+    // Verificar que el slot no esté ocupado por otra reserva
+    const conflicto = await Booking.findOne({
+      _id: { $ne: reserva._id },
+      court: reserva.court,
+      date,
+      status: { $in: ['pending', 'confirmed'] },
+      startTime: { $lt: endTime },
+      endTime: { $gt: startTime },
+    });
+
+    if (conflicto) {
+      return res.status(409).json({ message: 'El horario elegido ya está ocupado.' });
+    }
+
+    reserva.date      = date;
+    reserva.startTime = startTime;
+    reserva.endTime   = endTime;
+    reserva.status    = 'pending'; // vuelve a pendiente al modificar
+    await reserva.save();
+
+    await reserva.populate([
+      { path: 'court',    select: '_id name' },
+      { path: 'complex',  select: '_id name image city' },
+      { path: 'player',   select: '_id name' },
+    ]);
+
+    return res.json({ booking: reserva });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error al editar la reserva.', error: error.message });
+  }
+};
+
+// ── ELIMINAR RESERVA (jugador) ────────────────────────────────────────────────
+
+export const eliminarReserva = async (req, res) => {
+  try {
+    const reserva = await Booking.findById(req.params.id);
+    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+
+    const esJugadorDueno =
+      req.user.role === 'player' && reserva.player && reserva.player.equals(req.user._id);
+    const esAdmin = ['admin', 'superadmin'].includes(req.user.role);
+
+    if (!esJugadorDueno && !esAdmin) {
+      return res.status(403).json({ message: 'Acceso denegado.' });
+    }
+
+    await reserva.deleteOne();
+    return res.json({ message: 'Reserva eliminada correctamente.' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error al eliminar la reserva.', error: error.message });
+  }
+};
+
