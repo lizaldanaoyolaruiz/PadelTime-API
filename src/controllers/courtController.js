@@ -129,15 +129,14 @@ export const getCourtsSchedule = async (req, res) => {
       }
       complexId = req.query.complexId;
     } else {
-     
       complexId = req.user.complexId;
       if (!complexId) {
-        return res.status(403).json({ message: 'Usuario sin complejo asignado' });
-      }
-      
-      const complex = await getComplexIfOwner(complexId, req.user._id, req.user.role);
-      if (!complex) {
-        return res.status(403).json({ message: 'No autorizado para este complejo' });
+        const owned = await Complex.findOne({ owner: req.user._id });
+        if (!owned) return res.status(403).json({ message: 'Usuario sin complejo asignado' });
+        complexId = owned._id;
+      } else {
+        const complex = await getComplexIfOwner(complexId, req.user._id, req.user.role);
+        if (!complex) return res.status(403).json({ message: 'No autorizado para este complejo' });
       }
     }
 
@@ -173,6 +172,7 @@ export const getCourtsSchedule = async (req, res) => {
           day: b.dayOfWeek,
           startTime: b.startTime,
           endTime: b.endTime,
+          courtId: b.courtId ?? null,
         })),
         
       };
@@ -186,7 +186,7 @@ export const getCourtsSchedule = async (req, res) => {
 
 export const updateCourtSchedule = async (req, res) => {
   try {
-    const { id: courtId } = req.params;
+    const { courtId } = req.params;
     const { active, days } = req.body;
 
     const court = await Court.findById(courtId);
@@ -203,12 +203,13 @@ export const updateCourtSchedule = async (req, res) => {
       complexId = req.body.complexId;
     } else {
       complexId = req.user.complexId;
-    }
-
-    if (req.user.role !== 'superadmin') {
-      const complex = await getComplexIfOwner(complexId, req.user._id, req.user.role);
-      if (!complex) {
-        return res.status(403).json({ message: 'No autorizado para modificar esta cancha' });
+      if (!complexId) {
+        const owned = await Complex.findOne({ owner: req.user._id });
+        if (!owned) return res.status(403).json({ message: 'Usuario sin complejo asignado' });
+        complexId = owned._id;
+      } else {
+        const complex = await getComplexIfOwner(complexId, req.user._id, req.user.role);
+        if (!complex) return res.status(403).json({ message: 'No autorizado para modificar esta cancha' });
       }
     }
 
