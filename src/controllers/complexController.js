@@ -182,13 +182,15 @@ export const getMyComplex = async (req, res) => {
       ? { _id: req.query.complexId, owner: req.user._id }
       : { owner: req.user._id };
 
-    const complex = await Complex.findOne(filtro).select('+mercadopagoPublicKey');
+    const complex = await Complex.findOne(filtro).select('+mercadopagoPublicKey +mpAccessToken');
     if (!complex) return res.status(404).json({ message: 'No complex registered.' });
 
     const data = complex.toObject();
     if (data.mercadopagoPublicKey) {
       data.mercadopagoPublicKey = '••••••••' + data.mercadopagoPublicKey.slice(-4);
     }
+    data.mpTokenConfigured = !!data.mpAccessToken;
+    delete data.mpAccessToken;
 
     res.json({ complex: data });
   } catch (error) {
@@ -212,9 +214,15 @@ export const updateComplex = async (req, res) => {
     ];
     fields.forEach((f) => { if (req.body[f] !== undefined) complex[f] = req.body[f]; });
 
+    if (req.body.mpAccessToken?.trim()) {
+      complex.mpAccessToken = req.body.mpAccessToken.trim();
+      complex.mercadopagoActive = true;
+    }
+
     await complex.save();
     const data = complex.toObject();
     delete data.mercadopagoPublicKey;
+    delete data.mpAccessToken;
 
     res.json({ complex: data });
   } catch (error) {
