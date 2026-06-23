@@ -24,7 +24,7 @@ router.use('/bookings', bookingRoutes);
 router.use('/admin', adminRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/reviews', reviewRoutes);
-//router.use('/reports', reportRoutes);
+router.use('/reports', reportRoutes);
 router.use("/metrics", metricsRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/contact', contactRoutes);
