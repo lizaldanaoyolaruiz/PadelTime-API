@@ -257,6 +257,29 @@ export const uploadPhotos = async (req, res) => {
   }
 };
 
+export const setPrincipalPhoto = async (req, res) => {
+  try {
+    const complex = await Complex.findById(req.params.id);
+    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+
+    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Not authorized.' });
+    }
+
+    const { url } = req.body;
+    if (!complex.photos.includes(url)) {
+      return res.status(400).json({ message: 'La foto no pertenece a este complejo.' });
+    }
+
+    complex.image = url;
+    await complex.save();
+
+    res.json({ image: complex.image });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al establecer foto principal.', error: error.message });
+  }
+};
+
 export const deletePhoto = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
