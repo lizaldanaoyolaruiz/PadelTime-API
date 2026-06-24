@@ -18,6 +18,7 @@ const courtSchema = new mongoose.Schema(
     features: { type: [String], default: [] },
     pricePerHour: { type: Number, required: true, min: 0 },
     photo: { type: String },
+    photos: { type: [String], default: [] },
     enabled: { type: Boolean, default: true },
     schedule: {
       monday:    { type: daySchema, default: () => ({}) },

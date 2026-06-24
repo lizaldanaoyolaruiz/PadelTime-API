@@ -120,6 +120,70 @@ export const getPublicCourtById = async (req, res) => {
 };
 
 
+export const uploadCourtPhotos = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.id);
+    if (!court) return res.status(404).json({ message: 'Court not found.' });
+
+    const complex = await getComplexIfOwner(court.complex, req.user._id, req.user.role);
+    if (!complex) return res.status(403).json({ message: 'Not authorized.' });
+
+    if (!req.files?.length) return res.status(400).json({ message: 'No files provided.' });
+
+    const uploaded = await Promise.all(
+      req.files.map(f => uploadImage(f.buffer, `padeltime/complexes/${court.complex}/courts`))
+    );
+    const urls = uploaded.map(r => r.secure_url);
+
+    court.photos = [...(court.photos || []), ...urls];
+    if (!court.photo) court.photo = urls[0];
+    await court.save();
+
+    res.json({ photos: court.photos, photo: court.photo });
+  } catch (error) {
+    res.status(500).json({ message: 'Error uploading court photos.', error: error.message });
+  }
+};
+
+export const deleteCourtPhoto = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.id);
+    if (!court) return res.status(404).json({ message: 'Court not found.' });
+
+    const complex = await getComplexIfOwner(court.complex, req.user._id, req.user.role);
+    if (!complex) return res.status(403).json({ message: 'Not authorized.' });
+
+    const { url } = req.body;
+    court.photos = (court.photos || []).filter(u => u !== url);
+    if (court.photo === url) court.photo = court.photos[0] || null;
+    await court.save();
+
+    res.json({ photos: court.photos, photo: court.photo });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting court photo.', error: error.message });
+  }
+};
+
+export const setCourtPrincipalPhoto = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.id);
+    if (!court) return res.status(404).json({ message: 'Court not found.' });
+
+    const complex = await getComplexIfOwner(court.complex, req.user._id, req.user.role);
+    if (!complex) return res.status(403).json({ message: 'Not authorized.' });
+
+    const { url } = req.body;
+    if (!(court.photos || []).includes(url)) return res.status(400).json({ message: 'Photo not found in court.' });
+
+    court.photo = url;
+    await court.save();
+
+    res.json({ photo: court.photo });
+  } catch (error) {
+    res.status(500).json({ message: 'Error setting principal photo.', error: error.message });
+  }
+};
+
 export const getCourtsSchedule = async (req, res) => {
   try {
     let complexId;
