@@ -4,7 +4,7 @@ import {
   getFeaturedComplexes,
   getPublicComplexes, getPublicComplexById,
   createComplex, getMyComplex, updateComplex,
-  uploadPhotos, deletePhoto,
+  uploadPhotos, deletePhoto, setPrincipalPhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex, deleteComplex,
   toggleFeatured, getMyComplexes,
 } from '../controllers/complexController.js';
@@ -17,23 +17,42 @@ import validate from '../middlewares/validateMiddleware.js';
 const router = Router();
 
 const complexRules = [
-  body('name').trim().notEmpty().withMessage('Name is required.'),
-  body('location').trim().notEmpty().withMessage('Location is required.'),
-  body('city').trim().notEmpty().withMessage('City is required.'),
-  body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number.'),
-  body('openTime').matches(/^\d{2}:\d{2}$/).withMessage('openTime must be HH:MM.'),
-  body('closeTime').matches(/^\d{2}:\d{2}$/).withMessage('closeTime must be HH:MM.'),
-  body('depositPercentage').optional().isFloat({ min: 0, max: 100 }).withMessage('Deposit must be between 0 and 100.'),
+  body('name').trim().notEmpty().withMessage('El nombre es requerido.')
+    .isLength({ min: 3, max: 100 }).withMessage('El nombre debe tener entre 3 y 100 caracteres.'),
+  body('location').trim().notEmpty().withMessage('La dirección es requerida.')
+    .isLength({ min: 5, max: 200 }).withMessage('La dirección debe tener entre 5 y 200 caracteres.'),
+  body('city').trim().notEmpty().withMessage('La ciudad es requerida.')
+    .isLength({ min: 3, max: 50 }).withMessage('La ciudad debe tener entre 3 y 50 caracteres.')
+    .matches(/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/).withMessage('La ciudad solo puede contener letras.'),
+  body('price').isFloat({ min: 0.01, max: 999999 }).withMessage('El precio debe ser mayor a 0 y máximo $999.999.'),
+  body('openTime').notEmpty().withMessage('El horario de apertura es requerido.')
+    .matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('openTime debe ser HH:MM.'),
+  body('closeTime').notEmpty().withMessage('El horario de cierre es requerido.')
+    .matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('closeTime debe ser HH:MM.'),
+  body('whatsapp').trim().notEmpty().withMessage('El WhatsApp es requerido.')
+    .matches(/^\+?[\d\s\-]{7,15}$/).withMessage('Teléfono inválido (7–15 dígitos).'),
+  body('description').trim().notEmpty().withMessage('La descripción es requerida.')
+    .isLength({ min: 3, max: 500 }).withMessage('La descripción debe tener entre 3 y 500 caracteres.'),
+  body('depositPercentage').notEmpty().withMessage('El porcentaje de seña es requerido.')
+    .isInt({ min: 0, max: 100 }).withMessage('La seña debe ser un entero entre 0 y 100.'),
 ];
 
 const complexUpdateRules = [
-  body('name').optional().trim().notEmpty().withMessage('Name cannot be empty.'),
-  body('location').optional().trim(),
-  body('city').optional().trim().notEmpty().withMessage('City cannot be empty.'),
-  body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a positive number.'),
-  body('openTime').optional().matches(/^\d{2}:\d{2}$/).withMessage('openTime must be HH:MM.'),
-  body('closeTime').optional().matches(/^\d{2}:\d{2}$/).withMessage('closeTime must be HH:MM.'),
-  body('depositPercentage').optional().isFloat({ min: 0, max: 100 }).withMessage('Deposit must be between 0 and 100.'),
+  body('name').optional().trim().notEmpty().withMessage('El nombre no puede estar vacío.')
+    .isLength({ min: 3, max: 100 }).withMessage('El nombre debe tener entre 3 y 100 caracteres.'),
+  body('location').optional().trim().notEmpty().withMessage('La dirección no puede estar vacía.')
+    .isLength({ min: 5, max: 200 }).withMessage('La dirección debe tener entre 5 y 200 caracteres.'),
+  body('city').optional().trim().notEmpty().withMessage('La ciudad no puede estar vacía.')
+    .isLength({ min: 3, max: 50 }).withMessage('La ciudad debe tener entre 3 y 50 caracteres.')
+    .matches(/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/).withMessage('La ciudad solo puede contener letras.'),
+  body('price').optional().isFloat({ min: 0.01, max: 999999 }).withMessage('El precio debe ser mayor a 0 y máximo $999.999.'),
+  body('openTime').optional().matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('openTime debe ser HH:MM.'),
+  body('closeTime').optional().matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('closeTime debe ser HH:MM.'),
+  body('whatsapp').optional().trim().notEmpty().withMessage('El WhatsApp no puede estar vacío.')
+    .matches(/^\+?[\d\s\-]{7,15}$/).withMessage('Teléfono inválido (7–15 dígitos).'),
+  body('description').optional().trim().notEmpty().withMessage('La descripción no puede estar vacía.')
+    .isLength({ min: 3, max: 500 }).withMessage('La descripción debe tener entre 3 y 500 caracteres.'),
+  body('depositPercentage').optional().isInt({ min: 0, max: 100 }).withMessage('La seña debe ser un entero entre 0 y 100.'),
 ];
 
 router.get('/', getFeaturedComplexes);
@@ -46,6 +65,7 @@ router.get('/me/all', protect, requireRole('admin'), getMyComplexes);
 router.put('/:id', protect, requireRole('admin', 'superadmin'), complexUpdateRules, validate, updateComplex);
 router.post('/:id/photos', protect, requireRole('admin', 'superadmin'), uploadMultiple, uploadPhotos);
 router.delete('/:id/photos', protect, requireRole('admin', 'superadmin'), deletePhoto);
+router.patch('/:id/photos/principal', protect, requireRole('admin', 'superadmin'), setPrincipalPhoto);
 
 router.get('/admin', protect, requireRole('superadmin'), getAdminComplexes);
 router.delete('/:id', protect, requireRole('superadmin'), deleteComplex);
