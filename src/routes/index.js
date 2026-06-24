@@ -13,6 +13,7 @@ import paymentRoutes from './paymentRoutes.js';
 import metricsRoutes from './metricsRoutes.js';
 import contactRoutes from './contactRoutes.js';
 import blockoutRoutes from './blockoutRoutes.js';
+import torneoRoutes from './torneoRoutes.js';
 
 const router = Router();
 
@@ -31,5 +32,6 @@ router.use('/contact', contactRoutes);
 router.use('/maintenance', maintenanceRoutes);
 router.use('/favorites', favoriteRoutes);
 router.use('/blockouts', blockoutRoutes);
+router.use('/torneos', torneoRoutes);
 
 export default router;
