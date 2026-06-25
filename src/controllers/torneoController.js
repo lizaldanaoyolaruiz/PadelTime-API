@@ -1,4 +1,7 @@
 import Torneo from '../models/Torneo.js';
+import Complex from '../models/Complex.js';
+
+const POPULATE_COMPLEJO = { path: 'complejo', select: 'name' };
 
 export const getTorneos = async (req, res) => {
   try {
@@ -7,7 +10,9 @@ export const getTorneos = async (req, res) => {
     if (estado && ['activo', 'finalizado', 'cancelado'].includes(estado)) {
       filter.estado = estado;
     }
-    const torneos = await Torneo.find(filter).sort({ fechaInicio: 1 });
+    const torneos = await Torneo.find(filter)
+      .populate(POPULATE_COMPLEJO)
+      .sort({ fechaInicio: 1 });
     res.json({ torneos });
   } catch {
     res.status(500).json({ message: 'Error al obtener los torneos.' });
@@ -16,7 +21,7 @@ export const getTorneos = async (req, res) => {
 
 export const getTorneoById = async (req, res) => {
   try {
-    const torneo = await Torneo.findById(req.params.id);
+    const torneo = await Torneo.findById(req.params.id).populate(POPULATE_COMPLEJO);
     if (!torneo) return res.status(404).json({ message: 'Torneo no encontrado.' });
     res.json({ torneo });
   } catch {
@@ -30,7 +35,12 @@ export const createTorneo = async (req, res) => {
     if (new Date(fechaFin) < new Date(fechaInicio)) {
       return res.status(400).json({ message: 'La fecha de fin no puede ser anterior a la de inicio.' });
     }
-    const torneo = await Torneo.create(req.body);
+    const complex = await Complex.findOne({ owner: req.user._id });
+    const torneo = await Torneo.create({
+      ...req.body,
+      complejo: complex?._id ?? undefined,
+    });
+    await torneo.populate(POPULATE_COMPLEJO);
     res.status(201).json({ torneo });
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -52,7 +62,7 @@ export const updateTorneo = async (req, res) => {
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    );
+    ).populate(POPULATE_COMPLEJO);
     res.json({ torneo });
   } catch (err) {
     res.status(400).json({ message: err.message });
