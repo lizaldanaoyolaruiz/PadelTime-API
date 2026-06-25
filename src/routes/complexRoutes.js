@@ -3,7 +3,7 @@ import { body } from 'express-validator';
 import {
   getFeaturedComplexes,
   getPublicComplexes, getPublicComplexById,
-  createComplex, getMyComplex, updateComplex,
+  createComplex, createComplexByAdmin, getMyComplex, updateComplex,
   uploadPhotos, deletePhoto, setPrincipalPhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex, deleteComplex,
   toggleFeatured, getMyComplexes,
@@ -16,14 +16,13 @@ import validate from '../middlewares/validateMiddleware.js';
 
 const router = Router();
 
+const CITIES = ['San Miguel de Tucumán', 'Yerba Buena', 'Tafí Viejo'];
+
 const complexRules = [
   body('name').trim().notEmpty().withMessage('El nombre es requerido.')
     .isLength({ min: 3, max: 100 }).withMessage('El nombre debe tener entre 3 y 100 caracteres.'),
-  body('location').trim().notEmpty().withMessage('La dirección es requerida.')
-    .isLength({ min: 5, max: 200 }).withMessage('La dirección debe tener entre 5 y 200 caracteres.'),
   body('city').trim().notEmpty().withMessage('La ciudad es requerida.')
-    .isLength({ min: 3, max: 50 }).withMessage('La ciudad debe tener entre 3 y 50 caracteres.')
-    .matches(/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/).withMessage('La ciudad solo puede contener letras.'),
+    .isIn(CITIES).withMessage('Ciudad inválida. Opciones: ' + CITIES.join(', ')),
   body('price').isFloat({ min: 0.01, max: 999999 }).withMessage('El precio debe ser mayor a 0 y máximo $999.999.'),
   body('openTime').notEmpty().withMessage('El horario de apertura es requerido.')
     .matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('openTime debe ser HH:MM.'),
@@ -40,11 +39,7 @@ const complexRules = [
 const complexUpdateRules = [
   body('name').optional().trim().notEmpty().withMessage('El nombre no puede estar vacío.')
     .isLength({ min: 3, max: 100 }).withMessage('El nombre debe tener entre 3 y 100 caracteres.'),
-  body('location').optional().trim().notEmpty().withMessage('La dirección no puede estar vacía.')
-    .isLength({ min: 5, max: 200 }).withMessage('La dirección debe tener entre 5 y 200 caracteres.'),
-  body('city').optional().trim().notEmpty().withMessage('La ciudad no puede estar vacía.')
-    .isLength({ min: 3, max: 50 }).withMessage('La ciudad debe tener entre 3 y 50 caracteres.')
-    .matches(/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/).withMessage('La ciudad solo puede contener letras.'),
+  body('city').optional().trim().isIn(CITIES).withMessage('Ciudad inválida.'),
   body('price').optional().isFloat({ min: 0.01, max: 999999 }).withMessage('El precio debe ser mayor a 0 y máximo $999.999.'),
   body('openTime').optional().matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('openTime debe ser HH:MM.'),
   body('closeTime').optional().matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('closeTime debe ser HH:MM.'),
@@ -67,7 +62,17 @@ router.post('/:id/photos', protect, requireRole('admin', 'superadmin'), uploadMu
 router.delete('/:id/photos', protect, requireRole('admin', 'superadmin'), deletePhoto);
 router.patch('/:id/photos/principal', protect, requireRole('admin', 'superadmin'), setPrincipalPhoto);
 
+const complexAdminCreateRules = [
+  body('name').trim().notEmpty().withMessage('El nombre es requerido.')
+    .isLength({ min: 3, max: 100 }).withMessage('Nombre: 3–100 caracteres.'),
+  body('ownerEmail').trim().notEmpty().isEmail().withMessage('Email válido del propietario requerido.'),
+  body('city').trim().notEmpty().isIn(CITIES).withMessage('Ciudad inválida.'),
+  body('address').optional().trim().isLength({ min: 5, max: 120 }).withMessage('Dirección: 5–120 caracteres.'),
+  body('observations').optional().trim().isLength({ max: 300 }).withMessage('Observaciones: máx. 300 caracteres.'),
+];
+
 router.get('/admin', protect, requireRole('superadmin'), getAdminComplexes);
+router.post('/admin', protect, requireRole('superadmin'), complexAdminCreateRules, validate, createComplexByAdmin);
 router.delete('/:id', protect, requireRole('superadmin'), deleteComplex);
 router.patch('/:id/featured', protect, requireRole('superadmin'), toggleFeatured);
 router.patch('/:id/approve', protect, requireRole('superadmin'), approveComplex);
