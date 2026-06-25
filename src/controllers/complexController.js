@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cloudinary from '../config/cloudinary.js';
 import Complex from '../models/Complex.js';
 import Court from '../models/Court.js';
+import User from '../models/User.js';
 import ActivityLog from '../models/ActivityLog.js';
 import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
 
@@ -152,11 +153,11 @@ export const createComplex = async (req, res) => {
     const exists = await Complex.findOne({ owner: req.user._id });
     if (exists) return res.status(400).json({ message: 'You already have a registered complex.' });
 
-    const { name, location, city, description, whatsapp, instagram, depositPercentage, price, openTime, closeTime } = req.body;
+    const { name, address, city, description, whatsapp, instagram, depositPercentage, price, openTime, closeTime } = req.body;
 
     const complex = await Complex.create({
       owner: req.user._id,
-      name, location, city, description, whatsapp, instagram,
+      name, location: address, city, description, whatsapp, instagram,
       depositPercentage, price, openTime, closeTime,
       status: 'pending',
     });
@@ -208,11 +209,12 @@ export const updateComplex = async (req, res) => {
     }
 
     const fields = [
-      'name', 'location', 'city', 'description', 'whatsapp', 'instagram',
+      'name', 'city', 'description', 'whatsapp', 'instagram',
       'depositPercentage', 'mercadopagoPublicKey', 'mercadopagoActive',
       'price', 'openTime', 'closeTime', 'image',
     ];
     fields.forEach((f) => { if (req.body[f] !== undefined) complex[f] = req.body[f]; });
+    if (req.body.address !== undefined) complex.location = req.body.address;
 
     if (req.body.mpAccessToken?.trim()) {
       complex.mpAccessToken = req.body.mpAccessToken.trim();
@@ -227,6 +229,35 @@ export const updateComplex = async (req, res) => {
     res.json({ complex: data });
   } catch (error) {
     res.status(500).json({ message: 'Error updating complex.', error: error.message });
+  }
+};
+
+export const createComplexByAdmin = async (req, res) => {
+  try {
+    const { name, ownerEmail, city, address, observations } = req.body;
+
+    const ownerUser = await User.findOne({ email: ownerEmail.toLowerCase().trim() });
+    if (!ownerUser) {
+      return res.status(404).json({ message: 'No se encontró un usuario con ese email.' });
+    }
+    if (ownerUser.role !== 'admin') {
+      return res.status(400).json({ message: 'El usuario debe tener rol de propietario (admin).' });
+    }
+
+    const exists = await Complex.findOne({ owner: ownerUser._id });
+    if (exists) {
+      return res.status(400).json({ message: 'Este propietario ya tiene un complejo registrado.' });
+    }
+
+    const complex = await Complex.create({
+      owner: ownerUser._id,
+      name, city, location: address, observations,
+      status: 'approved',
+    });
+
+    res.status(201).json({ complex });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al crear el complejo.', error: error.message });
   }
 };
 
