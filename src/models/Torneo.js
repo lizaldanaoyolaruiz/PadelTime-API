@@ -18,6 +18,8 @@ const torneoSchema = new mongoose.Schema(
       enum: ['activo', 'finalizado', 'cancelado'],
       default: 'activo',
     },
+    whatsapp: { type: String, trim: true, maxlength: 20 },
+    complejo:  { type: mongoose.Schema.Types.ObjectId, ref: 'Complex' },
   },
   { timestamps: true }
 );
