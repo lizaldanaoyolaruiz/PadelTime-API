@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Complex from '../models/Complex.js';
+import Court from '../models/Court.js';
 import Booking from '../models/Booking.js';
 import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
 
@@ -117,6 +118,20 @@ export const toggleAdminStatus = async (req, res) => {
 
     user.status = status;
     await user.save();
+
+    // Cascada: suspender/reactivar el complejo y sus canchas
+    const complex = await Complex.findOne({ owner: user._id });
+    if (complex) {
+      if (status === 'suspended') {
+        complex.status = 'suspended';
+        await complex.save();
+        await Court.updateMany({ complex: complex._id }, { enabled: false });
+      } else if (status === 'approved' && complex.status === 'suspended') {
+        complex.status = 'approved';
+        await complex.save();
+        await Court.updateMany({ complex: complex._id }, { enabled: true });
+      }
+    }
 
     res.json({ message: 'Estado actualizado.', user });
   } catch (error) {
