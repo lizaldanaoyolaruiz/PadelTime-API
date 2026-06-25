@@ -19,7 +19,7 @@ const blockoutSchema = new mongoose.Schema({
     },
     dayOfWeek: {
         type: String,
-        enum: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'],
+        enum: [null, 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'],
         default: null
     },
     date: {
