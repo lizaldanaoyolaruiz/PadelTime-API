@@ -1,5 +1,6 @@
 import { Readable } from 'stream';
 import mongoose from 'mongoose';
+import { encrypt, decrypt } from '../utils/encryption.js';
 import cloudinary from '../config/cloudinary.js';
 import Complex from '../models/Complex.js';
 import Court from '../models/Court.js';
@@ -168,6 +169,20 @@ export const createComplex = async (req, res) => {
   }
 };
 
+const CIUDADES_VALIDAS = ['San Miguel de Tucumán', 'Tafí Viejo', 'Yerba Buena'];
+
+export const getCities = async (req, res) => {
+  try {
+    const rawCities = await Complex.distinct('city', { status: 'approved' });
+    const ciudades = CIUDADES_VALIDAS.filter(ciudadValida =>
+      rawCities.some(c => c?.trim().toLowerCase() === ciudadValida.toLowerCase())
+    );
+    return res.json({ ciudades });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error al obtener ciudades.', error: error.message });
+  }
+};
+
 export const getMyComplexes = async (req, res) => {
   try {
     const complexes = await Complex.find({ owner: req.user._id }).select('_id name city status').lean();
@@ -199,6 +214,26 @@ export const getMyComplex = async (req, res) => {
   }
 };
 
+export const deleteMpToken = async (req, res) => {
+  try {
+    const complex = await Complex.findById(req.params.id);
+    if (!complex) return res.status(404).json({ message: 'Complejo no encontrado.' });
+
+    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
+      return res.status(403).json({ message: 'No autorizado.' });
+    }
+
+    complex.mpAccessToken      = undefined;
+    complex.mercadopagoPublicKey = undefined;
+    complex.mercadopagoActive  = false;
+    await complex.save();
+
+    return res.json({ message: 'Token de Mercado Pago eliminado correctamente.', mercadopagoActive: false });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error al eliminar el token.', error: error.message });
+  }
+};
+
 export const updateComplex = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
@@ -217,7 +252,7 @@ export const updateComplex = async (req, res) => {
     if (req.body.address !== undefined) complex.location = req.body.address;
 
     if (req.body.mpAccessToken?.trim()) {
-      complex.mpAccessToken = req.body.mpAccessToken.trim();
+      complex.mpAccessToken = encrypt(req.body.mpAccessToken.trim());
       complex.mercadopagoActive = true;
     }
 

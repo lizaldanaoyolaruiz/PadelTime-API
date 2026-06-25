@@ -5,6 +5,7 @@ import Blockout from '../models/Blockout.js';
 import MaintenanceSlot from '../models/MaintenanceSlot.js';
 import { createPreference } from '../services/mpService.js';
 import { sendBookingConfirmedByOwnerEmail, sendBookingRejectedEmail } from '../services/emailService.js';
+import { decrypt } from '../utils/encryption.js';
 
 const padHour = (h) => String(h).padStart(2, '0') + ':00';
 
@@ -269,12 +270,13 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    if (!complejo?.mpAccessToken || !complejo?.mercadopagoActive) {
+    const tokenDescifrado = decrypt(complejo?.mpAccessToken);
+    if (!tokenDescifrado || !complejo?.mercadopagoActive) {
       return res.status(201).json({ booking: reserva, payment: null });
     }
 
     try {
-      const preferencia = await createPreference(complejo.mpAccessToken, {
+      const preferencia = await createPreference(tokenDescifrado, {
         booking: reserva,
         complex: complejo,
         court: reserva.court,

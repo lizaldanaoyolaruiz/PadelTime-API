@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import {
-  getFeaturedComplexes,
+  getFeaturedComplexes, getCities,
   getPublicComplexes, getPublicComplexById,
-  createComplex, createComplexByAdmin, getMyComplex, updateComplex,
+  createComplex, createComplexByAdmin, getMyComplex, updateComplex, deleteMpToken,
   uploadPhotos, deletePhoto, setPrincipalPhoto,
   getAdminComplexes, approveComplex, rejectComplex, suspendComplex, deleteComplex,
   toggleFeatured, getMyComplexes,
@@ -51,12 +51,14 @@ const complexUpdateRules = [
 ];
 
 router.get('/', getFeaturedComplexes);
+router.get('/cities', getCities);
 router.get('/public', getPublicComplexes);
 router.get('/public/:id', getPublicComplexById);
 
 router.post('/', protect, requireRole('admin'), complexRules, validate, createComplex);
 router.get('/me', protect, requireRole('admin'), getMyComplex);
 router.get('/me/all', protect, requireRole('admin'), getMyComplexes);
+router.delete('/:id/mp-token', protect, requireRole('admin', 'superadmin'), deleteMpToken);
 router.put('/:id', protect, requireRole('admin', 'superadmin'), complexUpdateRules, validate, updateComplex);
 router.post('/:id/photos', protect, requireRole('admin', 'superadmin'), uploadMultiple, uploadPhotos);
 router.delete('/:id/photos', protect, requireRole('admin', 'superadmin'), deletePhoto);
