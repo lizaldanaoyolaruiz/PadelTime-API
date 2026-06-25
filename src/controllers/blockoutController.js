@@ -24,7 +24,7 @@ async function getBlockouts(req, res) {
     res.json(blockouts);
   } catch (error) {
     res.status(500).json({
-      massage: error.massage,
+      message: error.message,
     });
   }
 }
@@ -86,7 +86,7 @@ async function createBlockout(req, res) {
     res.status(201).json(blockouts);
   } catch (error) {
     res.status(500).json({
-      massage: error.massage,
+      message: error.message,
     });
   }
 }
@@ -159,7 +159,7 @@ async function updateBlockout(req, res) {
     res.status(200).json(updatedBlockout);
   } catch (error) {
     return res.status(500).json({
-      massage: "Error en el servidor",
+      message: error.message || "Error en el servidor",
     });
   }
 }
