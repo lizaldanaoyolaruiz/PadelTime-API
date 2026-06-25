@@ -28,6 +28,8 @@ const torneoRules = [
   body('estado').optional()
     .isIn(['activo', 'finalizado', 'cancelado'])
     .withMessage('Estado inválido.'),
+  body('whatsapp').optional({ nullable: true, checkFalsy: true }).trim()
+    .isLength({ max: 20 }).withMessage('Máximo 20 caracteres.'),
 ];
 
 router.get('/',    getTorneos);
