@@ -1,6 +1,7 @@
 import Booking from '../models/Booking.js';
 import { getPayment } from '../services/mpService.js';
 import { sendBookingConfirmationEmail } from '../services/emailService.js';
+import { decrypt } from '../utils/encryption.js';
 
 const processPaymentNotification = async (bookingId, paymentId) => {
   const booking = await Booking.findById(bookingId)
@@ -15,7 +16,7 @@ const processPaymentNotification = async (bookingId, paymentId) => {
 
   if (booking.status === 'confirmed' || booking.status === 'cancelled') return;
 
-  const accessToken = booking.complex?.mpAccessToken;
+  const accessToken = decrypt(booking.complex?.mpAccessToken);
   if (!accessToken) {
     console.error(`[Webhook] No mpAccessToken for complex: ${booking.complex?._id}`);
     return;
