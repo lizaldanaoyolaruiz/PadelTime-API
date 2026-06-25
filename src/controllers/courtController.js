@@ -282,17 +282,22 @@ export const updateCourtSchedule = async (req, res) => {
       return res.status(403).json({ message: 'La cancha no pertenece a este complejo' });
     }
 
+    if (!Array.isArray(days) || days.length === 0) {
+      return res.status(400).json({ message: 'El campo days es requerido y debe ser un arreglo.' });
+    }
+
     const schedule = {};
     days.forEach(d => {
+      if (!d.day) return;
       schedule[d.day] = {
-        enabled: d.active,
-        start: d.openTime,
-        end: d.closeTime
+        enabled: Boolean(d.active),
+        start: (d.openTime && d.openTime !== '--') ? d.openTime : '08:00',
+        end: (d.closeTime && d.closeTime !== '--') ? d.closeTime : '22:00',
       };
     });
 
     court.schedule = schedule;
-    court.enabled = active;
+    if (active !== undefined) court.enabled = Boolean(active);
     await court.save();
 
     res.json({ message: 'Horarios actualizados correctamente.', court });
