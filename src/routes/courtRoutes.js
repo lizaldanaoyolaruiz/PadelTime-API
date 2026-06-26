@@ -16,7 +16,7 @@ const courtRules = [
   body('name').trim().notEmpty().withMessage('El nombre es requerido.')
     .isLength({ min: 3, max: 50 }).withMessage('El nombre debe tener entre 3 y 50 caracteres.'),
   body('type').isIn(['crystal', 'panoramic']).withMessage('El tipo debe ser crystal o panoramic.'),
-  body('pricePerHour').isFloat({ min: 0.01, max: 999999 }).withMessage('El precio debe ser mayor a 0 y máximo $999.999.'),
+  body('pricePerHour').optional().isFloat({ min: 0, max: 999999 }).withMessage('El precio máximo es $999.999.'),
   body('description').trim().notEmpty().withMessage('La descripción es requerida.')
     .isLength({ min: 3, max: 300 }).withMessage('La descripción debe tener entre 3 y 300 caracteres.'),
 ];

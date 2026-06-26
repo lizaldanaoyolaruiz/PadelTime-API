@@ -44,7 +44,9 @@ export const getSlots = async (req, res) => {
       return res.status(400).json({ message: 'Se requieren courtId, from y to.' });
     }
 
-    const cancha = await Court.findById(courtId).lean();
+    const cancha = await Court.findById(courtId)
+      .populate('complex', 'openTime closeTime')
+      .lean();
     if (!cancha) {
       return res.status(404).json({ message: 'Cancha no encontrada.' });
     }
@@ -82,8 +84,12 @@ export const getSlots = async (req, res) => {
 
       if (!daySchedule?.enabled) continue;
 
-      const startHour = parseInt(daySchedule.start?.split(':')[0] ?? 7);
-      const endHour = parseInt(daySchedule.end?.split(':')[0] ?? 22);
+      const courtStart   = parseInt(daySchedule.start?.split(':')[0] ?? 7);
+      const courtEnd     = parseInt(daySchedule.end?.split(':')[0]   ?? 22);
+      const complexStart = cancha.complex?.openTime  ? parseInt(cancha.complex.openTime.split(':')[0])  : courtStart;
+      const complexEnd   = cancha.complex?.closeTime ? parseInt(cancha.complex.closeTime.split(':')[0]) : courtEnd;
+      const startHour    = Math.max(courtStart, complexStart);
+      const endHour      = Math.min(courtEnd,   complexEnd);
 
       for (let hora = startHour; hora < endHour; hora++) {
         const horaStr = padHour(hora);

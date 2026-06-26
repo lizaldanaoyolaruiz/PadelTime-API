@@ -94,11 +94,11 @@ export const getPublicComplexes = async (req, res) => {
     const resultado = complejos.map(complejo => {
       const canchasDelComplejo = canchasPorComplejo[complejo._id.toString()] || [];
 
-      // Precio mínimo entre las canchas del complejo
+      // Precio: se usa el del complejo como valor principal; canchas como fallback
       const precios = canchasDelComplejo
         .filter(c => c.pricePerHour > 0)
         .map(c => c.pricePerHour);
-      const precioPorHora = precios.length > 0 ? Math.min(...precios) : (complejo.price || 0);
+      const precioPorHora = complejo.price || (precios.length > 0 ? Math.min(...precios) : 0);
 
       // Features únicas de todas las canchas
       const features = [];
