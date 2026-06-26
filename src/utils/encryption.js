@@ -2,7 +2,7 @@ import crypto from 'crypto';
 
 const algorithm = 'aes-256-gcm';
 const key = crypto.createHash('sha256')
-  .update(process.env.MP_ENCRYPTION_KEY || process.env.JWT_SECRET || '')
+  .update(process.env.MP_ENCRYPTION_KEY)
   .digest();
 
 export const encrypt = (text) => {
