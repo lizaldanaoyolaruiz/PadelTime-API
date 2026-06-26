@@ -50,6 +50,23 @@ function timeToMinutes(t) {
   return h * 60 + (m || 0);
 }
 
+function getNowArgentina() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date());
+  const get = type => parts.find(p => p.type === type).value;
+  const hour   = parseInt(get('hour'));
+  const minute = parseInt(get('minute'));
+  return {
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+    hour,
+    minute,
+    totalMinutes: hour * 60 + minute,
+  };
+}
+
 function slotOverlapsBlockout(slotStart, slotEnd, blockout) {
   const sS = timeToMinutes(slotStart);
   const sE = timeToMinutes(slotEnd);
@@ -76,11 +93,16 @@ async function buscarAlternativas({ complexId, date, dayEN, blockouts, courts, e
   const openHour  = Math.floor(openMin / 60);
   const closeHour = Math.floor(closeMin / 60);
 
+  const nowAR = getNowArgentina();
+
   for (let h = openHour; h < closeHour && alternativas.length < 3; h++) {
     const slotStart = `${String(h).padStart(2, '0')}:00`;
     const slotEnd   = `${String(h + 1).padStart(2, '0')}:00`;
 
     if (slotStart === excludeTime) continue;
+
+    // No sugerir horarios pasados para el día de hoy
+    if (date === nowAR.date && h * 60 < nowAR.totalMinutes) continue;
 
     const globallyBlocked = blockouts.some(b => !b.courtId && slotOverlapsBlockout(slotStart, slotEnd, b));
     if (globallyBlocked) continue;
@@ -136,6 +158,15 @@ async function buscarAlternativas({ complexId, date, dayEN, blockouts, courts, e
 
 async function executeVerificarDisponibilidad({ complexId, date, startTime, courtType }) {
   try {
+    // Rechazar fechas u horarios ya transcurridos
+    const nowAR = getNowArgentina();
+    if (date < nowAR.date || (date === nowAR.date && timeToMinutes(startTime) < nowAR.totalMinutes)) {
+      return {
+        error: 'fecha_pasada',
+        mensaje: 'No se pueden verificar ni reservar fechas u horarios ya transcurridos.',
+      };
+    }
+
     const complex = await Complex.findById(complexId)
       .select('name whatsapp openTime closeTime')
       .lean();
