@@ -82,10 +82,10 @@ export const getSlots = async (req, res) => {
       const scheduleKey = DIA_A_SCHEDULE[diaSemana];
       const daySchedule = cancha.schedule?.[scheduleKey];
 
-      if (!daySchedule?.enabled) continue;
+      if (daySchedule?.enabled === false) continue;
 
-      const courtStart   = parseInt(daySchedule.start?.split(':')[0] ?? 7);
-      const courtEnd     = parseInt(daySchedule.end?.split(':')[0]   ?? 22);
+      const courtStart   = parseInt(daySchedule?.start?.split(':')[0] ?? 7);
+      const courtEnd     = parseInt(daySchedule?.end?.split(':')[0]   ?? 22);
       const complexStart = cancha.complex?.openTime  ? parseInt(cancha.complex.openTime.split(':')[0])  : courtStart;
       const complexEnd   = cancha.complex?.closeTime ? parseInt(cancha.complex.closeTime.split(':')[0]) : courtEnd;
       const startHour    = Math.max(courtStart, complexStart);
