@@ -40,7 +40,7 @@ export const createCourt = async (req, res) => {
 
     res.status(201).json({ court });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating court.', error: error.message });
+    res.status(500).json({ message: 'Lo sentimos, no pudimos crear la cancha. Intenta nuevamente.', error: error.message });
   }
 };
 

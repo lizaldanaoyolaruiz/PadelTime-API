@@ -74,6 +74,12 @@ export const createPreference = async (accessToken, { booking, complex, court })
   return response.body;
 };
 
+export const searchPaymentsByReference = async (accessToken, externalReference) => {
+  const response = await mpRequest('GET', `/v1/payments/search?external_reference=${externalReference}`, accessToken);
+  if (response.status !== 200) throw new Error(`MP search failed (${response.status}): ${JSON.stringify(response.body)}`);
+  return response.body;
+};
+
 export const getPayment = async (accessToken, paymentId) => {
   const response = await mpRequest('GET', `/v1/payments/${paymentId}`, accessToken);
 

@@ -216,14 +216,17 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
     // Determine blocked courts at this slot
     let allCourtsBlocked = false;
     const blockedCourtIds = new Set();
+    let motivoBloqueo = null;
 
     for (const b of blockouts) {
       if (slotOverlapsBlockout(startTime, endTime, b)) {
         if (!b.courtId) {
           allCourtsBlocked = true;
+          motivoBloqueo = b.name || null;
           break;
         } else {
           blockedCourtIds.add(b.courtId.toString());
+          if (!motivoBloqueo) motivoBloqueo = b.name || null;
         }
       }
     }
@@ -251,9 +254,13 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
     // 6. Reason for unavailability
     let razonNoDisponible = null;
     if (available.length === 0) {
-      if (!isWithinHours) {
+      if (scheduledCourts.length === 0) {
+        // All courts have that day disabled in their schedule
+        razonNoDisponible = 'cancha_cerrada';
+      } else if (!isWithinHours || openCourts.length === 0) {
+        // Outside complex hours or outside all courts' operating hours for that slot
         razonNoDisponible = 'fuera_de_horario';
-      } else if (allCourtsBlocked) {
+      } else if (allCourtsBlocked || blockedCourtIds.size > 0) {
         razonNoDisponible = 'bloqueado_mantenimiento';
       } else {
         razonNoDisponible = 'todo_ocupado';
@@ -309,6 +316,7 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
       whatsapp: complex.whatsapp || null,
       totalDisponibles: available.length,
       razonNoDisponible,
+      motivoBloqueo,
       horarioComplejo: `${complex.openTime || '—'} a ${complex.closeTime || '—'}`,
       alternativasSugeridas: alternativasSugeridas.map(a => ({ horario: a.horario, canchasDisponibles: a.canchas.length })),
       alternativasOpciones,
