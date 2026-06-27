@@ -3,8 +3,8 @@ import Complex from '../models/Complex.js';
 import Court from '../models/Court.js';
 import Blockout from '../models/Blockout.js';
 import MaintenanceSlot from '../models/MaintenanceSlot.js';
-import { createPreference } from '../services/mpService.js';
-import { sendBookingConfirmedByOwnerEmail, sendBookingRejectedEmail } from '../services/emailService.js';
+import { createPreference, getPayment, searchPaymentsByReference } from '../services/mpService.js';
+import { sendBookingConfirmedByOwnerEmail, sendBookingRejectedEmail, sendBookingConfirmationEmail } from '../services/emailService.js';
 import { decrypt } from '../utils/encryption.js';
 
 const padHour = (h) => String(h).padStart(2, '0') + ':00';
@@ -36,12 +36,17 @@ const generarFechas = (from, to) => {
   return fechas;
 };
 
+const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(String(id ?? ''));
+
 export const getSlots = async (req, res) => {
   try {
     const { courtId, from, to } = req.query;
 
     if (!courtId || !from || !to) {
       return res.status(400).json({ message: 'Se requieren courtId, from y to.' });
+    }
+    if (!isValidObjectId(courtId)) {
+      return res.status(400).json({ message: 'courtId inválido.' });
     }
 
     const cancha = await Court.findById(courtId)
@@ -173,6 +178,24 @@ export const getBookings = async (req, res) => {
   }
 };
 
+export const getBookingById = async (req, res) => {
+  try {
+    const reserva = await Booking.findById(req.params.id)
+      .populate('court', '_id name')
+      .populate('complex', '_id name')
+      .populate('player', '_id name')
+      .lean();
+    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    // Only allow the player who owns it or admin/superadmin
+    if (req.user.role === 'player' && reserva.player?._id?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Acceso denegado.' });
+    }
+    return res.json({ booking: reserva });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error al obtener la reserva.', error: error.message });
+  }
+};
+
 export const createBooking = async (req, res) => {
   try {
     const esFlujAdmin = !!req.body.canchaId;
@@ -215,13 +238,24 @@ export const createBooking = async (req, res) => {
       }
     }
 
-    const conflicto = await Booking.findOne({
+    let conflicto = await Booking.findOne({
       court: courtId,
       date: fecha,
       status: { $nin: ['cancelled', 'rejected'] },
       startTime: { $lt: horaFin },
       endTime: { $gt: horaInicio },
     });
+
+    // Auto-cancel pending MP bookings: same player retrying, or abandoned > 5 min
+    if (conflicto && conflicto.status === 'pending' && conflicto.confirmationMethod === 'mercadopago') {
+      const samePlayer = req.user && conflicto.player && conflicto.player.toString() === req.user._id.toString();
+      const minutosTranscurridos = (Date.now() - new Date(conflicto.createdAt).getTime()) / 60000;
+      if (samePlayer || minutosTranscurridos > 5) {
+        conflicto.status = 'cancelled';
+        await conflicto.save();
+        conflicto = null;
+      }
+    }
 
     if (conflicto) {
       return res.status(409).json({ message: 'El horario ya está ocupado para esa cancha.' });
@@ -297,7 +331,9 @@ export const createBooking = async (req, res) => {
       });
     } catch (mpError) {
       console.error('[MP] Error creando preferencia:', mpError.message);
-      return res.status(201).json({ booking: reserva, payment: null });
+      reserva.status = 'cancelled';
+      await reserva.save();
+      return res.status(500).json({ message: 'Error al conectar con Mercado Pago. Intentá nuevamente.' });
     }
   } catch (error) {
     return res.status(500).json({ message: 'Error al crear la reserva.', error: error.message });
@@ -310,6 +346,9 @@ export const getBookingStats = async (req, res) => {
 
     if (!from || !to) {
       return res.status(400).json({ message: 'Se requieren from y to.' });
+    }
+    if (courtId && !isValidObjectId(courtId)) {
+      return res.status(400).json({ message: 'courtId inválido.' });
     }
 
     const fechas = generarFechas(from, to);
@@ -350,8 +389,57 @@ export const getBookingStats = async (req, res) => {
   }
 };
 
+export const verificarPagoMP = async (req, res) => {
+  try {
+    const reserva = await Booking.findById(req.params.id)
+      .populate('complex', '+mpAccessToken name whatsapp location')
+      .populate('court', '_id name type')
+      .populate('player', '_id name email');
+
+    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    if (reserva.confirmationMethod !== 'mercadopago') return res.status(400).json({ message: 'No es una reserva MP.' });
+    if (reserva.status === 'confirmed') return res.json({ booking: reserva });
+
+    const tokenDescifrado = decrypt(reserva.complex?.mpAccessToken);
+    if (!tokenDescifrado) return res.json({ booking: reserva });
+
+    const resultado = await searchPaymentsByReference(tokenDescifrado, reserva._id.toString());
+    const pagoAprobado = resultado?.results?.find(p => p.status === 'approved');
+
+    if (pagoAprobado) {
+      reserva.paymentId = String(pagoAprobado.id);
+      reserva.status = 'confirmed';
+      await reserva.save();
+      sendBookingConfirmationEmail(reserva).catch(err =>
+        console.error('[Email] Error enviando confirmación:', err.message)
+      );
+      console.log('[VerifyMP] Booking confirmed via MP search:', reserva._id);
+    }
+
+    return res.json({ booking: reserva });
+  } catch (error) {
+    console.error('[VerifyMP] Error:', error.message);
+    return res.status(500).json({ message: 'Error al verificar el pago.', error: error.message });
+  }
+};
+
+export const limpiarReservasMPPendientes = async (req, res) => {
+  try {
+    const { all } = req.body || {};
+    const filtro = all
+      ? { status: { $in: ['pending', 'confirmed'] } }
+      : { status: { $in: ['pending', 'confirmed'] }, confirmationMethod: 'mercadopago' };
+    const result = await Booking.updateMany(filtro, { $set: { status: 'cancelled' } });
+    return res.json({ canceladas: result.modifiedCount });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error al limpiar reservas.', error: error.message });
+  }
+};
+
 export const confirmarPago = async (req, res) => {
   try {
+    const { paymentId, collectionStatus } = req.body;
+
     const reserva = await Booking.findById(req.params.id);
     if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
 
@@ -359,30 +447,44 @@ export const confirmarPago = async (req, res) => {
       return res.status(400).json({ message: 'Esta reserva no es de MercadoPago.' });
     }
 
+    // Already confirmed — idempotent
     if (reserva.status === 'confirmed') {
-      await reserva.populate([
-        { path: 'court', select: '_id name' },
-        { path: 'complex', select: '_id whatsapp' },
-        { path: 'player', select: '_id name' },
-      ]);
       return res.json({ booking: reserva });
     }
 
-    if (reserva.status === 'cancelled' || reserva.status === 'rejected') {
-      return res.status(400).json({ message: 'La reserva fue cancelada o rechazada.' });
+    // Payment still processing — leave booking as pending
+    if (['pending', 'in_process'].includes(collectionStatus)) {
+      return res.json({ booking: reserva, pending: true });
     }
 
+    // MP explicitly said the payment failed — cancel to free the slot
+    if (['rejected', 'cancelled', 'null'].includes(collectionStatus)) {
+      if (reserva.status === 'pending') {
+        reserva.status = 'cancelled';
+        await reserva.save();
+      }
+      return res.status(400).json({ message: 'El pago no fue aprobado. Podés intentarlo nuevamente.' });
+    }
+
+    // Confirmed OR status unknown (trust back_urls.success redirect)
+    if (paymentId) reserva.paymentId = paymentId;
     reserva.status = 'confirmed';
     await reserva.save();
 
     await reserva.populate([
-      { path: 'court', select: '_id name' },
-      { path: 'complex', select: '_id whatsapp' },
-      { path: 'player', select: '_id name' },
+      { path: 'court',    select: '_id name type' },
+      { path: 'complex',  select: '_id name whatsapp location' },
+      { path: 'player',   select: '_id name email' },
     ]);
 
+    sendBookingConfirmationEmail(reserva).catch((err) =>
+      console.error('[Email] Error enviando confirmación de pago:', err.message)
+    );
+
+    console.log('[PaymentSuccess] Booking confirmed:', reserva._id);
     return res.json({ booking: reserva });
   } catch (error) {
+    console.error('[PaymentSuccess] Error:', error.message);
     return res.status(500).json({ message: 'Error al confirmar el pago.', error: error.message });
   }
 };
