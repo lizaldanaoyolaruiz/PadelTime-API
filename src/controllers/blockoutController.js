@@ -3,7 +3,6 @@ import Booking from "../models/Booking.js";
 import Complex from "../models/Complex.js";
 import Court from "../models/Court.js";
 
-// Returns dates to check for conflicts based on recurrence type
 function getDatesToCheck(recurrence, date, dayOfWeek) {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
@@ -97,7 +96,6 @@ async function createBlockout(req, res) {
         return res.status(400).json({ message: "La cancha no pertenece a este complejo" });
       }
 
-      // Validate the blockout is within the court's schedule for the selected day
       const DAY_ES_TO_EN = {
         lunes: 'monday', martes: 'tuesday', miercoles: 'wednesday',
         jueves: 'thursday', viernes: 'friday', sabado: 'saturday', domingo: 'sunday',
@@ -124,7 +122,7 @@ async function createBlockout(req, res) {
         }
       }
     }
-    // Check for conflicting bookings
+
     const datesToCheck = getDatesToCheck(recurrence, date, dayOfWeek);
     if (datesToCheck.length > 0) {
       const bookingFiltro = {
@@ -226,7 +224,7 @@ async function updateBlockout(req, res) {
       if (!court) {
         return res.status(400).json({ message: 'La cancha no existe' });
       }
-     
+
       const finalComplexId = updateData.complexId || existBlockout.complexId;
       if (court.complex.toString() !== finalComplexId.toString()) {
         return res.status(400).json({ message: 'La cancha no pertenece a este complejo' });
