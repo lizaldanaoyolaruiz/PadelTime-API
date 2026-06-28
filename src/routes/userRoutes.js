@@ -11,10 +11,8 @@ import {
 
 const router = express.Router();
 
-// CRUD usuarios
 router.get('/', getUsers);
 
-// PERFIL COMPLETO
 router.get('/:id/full', getUserFullProfile);
 
 router.get('/:id', getUserById);
