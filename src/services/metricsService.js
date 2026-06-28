@@ -26,7 +26,7 @@ const getDateRange = (periodo) => {
 const getPrevDateRange = (periodo, currentFrom, currentTo) => {
   const from = new Date(currentFrom + 'T00:00:00');
   const to   = new Date(currentTo   + 'T00:00:00');
-  const diffMs = to - from + 86400000; // inclusive days in ms
+  const diffMs = to - from + 86400000;
 
   if (periodo === 'semana') {
     const prevTo   = new Date(from); prevTo.setDate(prevTo.getDate() - 1);
@@ -42,7 +42,7 @@ const getPrevDateRange = (periodo, currentFrom, currentTo) => {
     const y = from.getFullYear() - 1;
     return { from: `${y}-01-01`, to: `${y}-12-31` };
   }
-  // personalizado: mismo rango hacia atrás
+
   const prevTo   = new Date(from); prevTo.setDate(prevTo.getDate() - 1);
   const prevFrom = new Date(prevTo.getTime() - diffMs + 86400000);
   return { from: toISO(prevFrom), to: toISO(prevTo) };
@@ -55,7 +55,7 @@ const calcTrend = (current, prev) => {
 };
 
 export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate } = {}) => {
-  // ── Owner's complexes ──────────────────────────────────────────────────────
+
   const filter = ownerId ? { owner: ownerId } : {};
   const complejos   = await Complex.find(filter).select('_id').lean();
   const complexIds  = complejos.map(c => c._id);
@@ -64,7 +64,6 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
     return emptyMetrics();
   }
 
-  // ── Date range ─────────────────────────────────────────────────────────────
   let dateFilter = {};
   if (startDate && endDate) {
     dateFilter = { $gte: startDate, $lte: endDate };
@@ -78,7 +77,6 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
 
   const confirmedFilter = { ...baseFilter, status: { $in: ['confirmed', 'completed'] } };
 
-  // ── Previous period for trends ─────────────────────────────────────────────
   const currentFrom = Object.keys(dateFilter).length ? dateFilter.$gte : null;
   const currentTo   = Object.keys(dateFilter).length ? dateFilter.$lte : null;
 
@@ -91,7 +89,6 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
     prevConfirmedFilter = { ...prevBaseFilter, status: { $in: ['confirmed', 'completed'] } };
   }
 
-  // ── Aggregations ───────────────────────────────────────────────────────────
   const [
     totalReservas,
     reservasConfirmadas,
@@ -109,19 +106,16 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
     Booking.countDocuments(baseFilter),
     Booking.countDocuments(confirmedFilter),
 
-    // Total ingresos (reservas pagadas)
     Booking.aggregate([
       { $match: confirmedFilter },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } },
     ]),
 
-    // Señas cobradas
     Booking.aggregate([
       { $match: confirmedFilter },
       { $group: { _id: null, total: { $sum: '$depositAmount' } } },
     ]),
 
-    // ── Previous period ──────────────────────────────────────────────────────
     ...(prevBaseFilter ? [
       Booking.countDocuments(prevBaseFilter),
       Booking.countDocuments(prevConfirmedFilter),
@@ -140,7 +134,6 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
       Promise.resolve([]),
     ]),
 
-    // Ranking de canchas
     Booking.aggregate([
       { $match: baseFilter },
       { $group: { _id: '$court', reservas: { $sum: 1 } } },
@@ -158,7 +151,6 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
       { $limit: 6 },
     ]),
 
-    // Reservas por período
     Booking.aggregate([
       { $match: baseFilter },
       {
@@ -169,17 +161,16 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
       {
         $group: {
           _id: periodo === 'año'
-            ? { $month: '$_parsedDate' }                           // 1–12
+            ? { $month: '$_parsedDate' }
             : periodo === 'semana'
-              ? { $dayOfWeek: '$_parsedDate' }                     // 1=Dom … 7=Sáb
-              : { $ceil: { $divide: [{ $dayOfMonth: '$_parsedDate' }, 7] } }, // semana del mes 1–5
+              ? { $dayOfWeek: '$_parsedDate' }
+              : { $ceil: { $divide: [{ $dayOfMonth: '$_parsedDate' }, 7] } },
           reservas: { $sum: 1 },
         },
       },
       { $sort: { _id: 1 } },
     ]),
 
-    // Heatmap: (dayOfWeek × hour)
     Booking.aggregate([
       { $match: baseFilter },
       {
@@ -198,13 +189,12 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
     ]),
   ]);
 
-  // ── Format reservasPorPeriodo — rellenar todos los períodos con 0 ──────────
   const rawMap = new Map(reservasPorPeriodoRaw.map(r => [r._id, r.reservas]));
 
   let reservasPorPeriodo;
 
   if (periodo === 'semana') {
-    // 1=Dom…7=Sáb → mostrar Lun(2) a Dom(1) en orden
+
     const ORDER = [2, 3, 4, 5, 6, 7, 1];
     reservasPorPeriodo = ORDER.map(dow => ({
       dia: DAY_NAMES[dow],
@@ -212,28 +202,26 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
     }));
 
   } else if (periodo === 'año') {
-    // Todos los meses 1–12
+
     reservasPorPeriodo = Array.from({ length: 12 }, (_, i) => ({
       dia: MONTH_NAMES[i + 1],
       reservas: rawMap.get(i + 1) || 0,
     }));
 
   } else {
-    // mes → semanas 1–5 (ceil de día / 7)
+
     reservasPorPeriodo = [1, 2, 3, 4, 5].map(s => ({
       dia: `S${s}`,
       reservas: rawMap.get(s) || 0,
     }));
   }
 
-  // ── Format heatmap ─────────────────────────────────────────────────────────
   const heatmap = heatmapRaw.map(r => ({
-    dayOfWeek: r._id.dayOfWeek, // 1=Dom … 7=Sab
+    dayOfWeek: r._id.dayOfWeek,
     hour:      r._id.hour,
     reservas:  r.reservas,
   }));
 
-  // ── Income breakdown ───────────────────────────────────────────────────────
   const totalIngresos  = ingresosResult[0]?.total  || 0;
   const totalSenias    = seniasResult[0]?.total    || 0;
   const pagosCompletos = Math.max(0, totalIngresos - totalSenias);
@@ -263,10 +251,8 @@ export const getMetrics = async ({ ownerId, periodo = 'mes', startDate, endDate 
         { name: 'Señas',         value: 0 },
       ];
 
-  // ── Peak hour analysis ─────────────────────────────────────────────────────
   const peakHour = heatmap.reduce((max, c) => (c.reservas > max.reservas ? c : max), { reservas: 0 });
 
-  // ── Efficiency score (0–10) ────────────────────────────────────────────────
   const efficiency = Math.min(10, (tasaNum / 10)).toFixed(1);
 
   return {
