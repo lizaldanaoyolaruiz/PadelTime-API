@@ -12,7 +12,7 @@ const parseTimeToMinutes = (timeStr) => {
 const getTotalWeeklyMinutes = (openingDays, openTime, closeTime) => {
    const openMin = parseTimeToMinutes(openTime)
    const closeMIn = parseTimeToMinutes(closeTime)
-   const dailyHours = closeMin - openMin 
+   const dailyHours = closeMin - openMin
    if (dailyHours <= 0) return 0
    return dailyHours * openingDays.length
 }
