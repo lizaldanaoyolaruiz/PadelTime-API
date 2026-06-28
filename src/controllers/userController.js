@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 import Booking from '../models/Booking.js';
-// GET /users
+
 const getUsers = async (req, res, next) => {
   try {
     const users = await User.find().sort({ createdAt: -1 });
@@ -14,7 +14,7 @@ const getUsers = async (req, res, next) => {
     next(error);
   }
 };
-// GET /users/:id/full
+
 const getUserFullProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id)
@@ -43,7 +43,7 @@ const getUserFullProfile = async (req, res, next) => {
     next(error);
   }
 };
-// GET /users/:id
+
 const getUserById = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
@@ -64,7 +64,6 @@ const getUserById = async (req, res, next) => {
   }
 };
 
-// POST /users
 const createUser = async (req, res, next) => {
   try {
     const {
@@ -103,7 +102,6 @@ const createUser = async (req, res, next) => {
   }
 };
 
-// PUT /users/:id
 const updateUser = async (req, res, next) => {
   try {
     const allowedFields = [
@@ -147,7 +145,6 @@ const updateUser = async (req, res, next) => {
   }
 };
 
-// DELETE /users/:id
 const deleteUser = async (req, res, next) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
