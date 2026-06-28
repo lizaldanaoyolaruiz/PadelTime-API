@@ -144,7 +144,7 @@ export const getPublicComplexById = async (req, res) => {
 export const createComplex = async (req, res) => {
   try {
     const exists = await Complex.findOne({ owner: req.user._id });
-    if (exists) return res.status(400).json({ message: 'You already have a registered complex.' });
+    if (exists) return res.status(400).json({ message: 'Ya tenés un complejo registrado.' });
 
     const { name, address, city, description, whatsapp, instagram, depositPercentage, price, openTime, closeTime } = req.body;
 
@@ -157,7 +157,10 @@ export const createComplex = async (req, res) => {
 
     res.status(201).json({ complex });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating complex.', error: error.message });
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Error al crear el complejo.', error: error.message });
   }
 };
 
