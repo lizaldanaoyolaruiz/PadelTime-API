@@ -119,7 +119,6 @@ export const getPublicCourtById = async (req, res) => {
   }
 };
 
-
 export const uploadCourtPhotos = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
@@ -204,15 +203,13 @@ export const getCourtsSchedule = async (req, res) => {
       }
     }
 
-    
     const courts = await Court.find({ complex: complexId }).sort({ createdAt: 1 });
-    
+
     const Blockout = (await import('../models/Blockout.js')).default;
     const blockouts = await Blockout.find({ complexId, isActive: true });
 
-    
     const result = courts.map(court => {
-      
+
       const courtBlocks = blockouts.filter(
         b => !b.courtId || b.courtId.toString() === court._id.toString()
       );
@@ -238,7 +235,7 @@ export const getCourtsSchedule = async (req, res) => {
           endTime: b.endTime,
           courtId: b.courtId ?? null,
         })),
-        
+
       };
     });
 
@@ -258,7 +255,6 @@ export const updateCourtSchedule = async (req, res) => {
       return res.status(404).json({ message: 'Cancha no encontrada.' });
     }
 
-    
     let complexId;
     if (req.user.role === 'superadmin') {
       if (!req.body.complexId) {
@@ -277,7 +273,6 @@ export const updateCourtSchedule = async (req, res) => {
       }
     }
 
-    
     if (court.complex.toString() !== complexId.toString()) {
       return res.status(403).json({ message: 'La cancha no pertenece a este complejo' });
     }
