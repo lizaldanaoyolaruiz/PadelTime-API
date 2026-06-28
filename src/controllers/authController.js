@@ -113,7 +113,7 @@ export const updateMe = async (req, res) => {
 
     if (name)  user.name  = name;
     if (email) user.email = email.toLowerCase();
-    if (password) user.password = password; // pre-save hook hashea
+    if (password) user.password = password;
 
     await user.save();
     res.json({ user: formatUser(user) });

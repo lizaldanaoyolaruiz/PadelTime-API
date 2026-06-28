@@ -4,8 +4,6 @@ import Court from '../models/Court.js';
 import Booking from '../models/Booking.js';
 import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
 
-// ── LIST ──────────────────────────────────────────────────────────────────────
-
 export const getAdminUsers = async (req, res) => {
   try {
     const { status } = req.query;
@@ -14,7 +12,6 @@ export const getAdminUsers = async (req, res) => {
 
     const users = await User.find(filter).sort({ createdAt: -1 });
 
-    // attach complexes count for each owner
     const usersWithCount = await Promise.all(
       users.map(async (u) => {
         const complexesCount = await Complex.countDocuments({ owner: u._id });
@@ -27,8 +24,6 @@ export const getAdminUsers = async (req, res) => {
     res.status(500).json({ message: 'Error fetching users.', error: error.message });
   }
 };
-
-// ── CREATE ────────────────────────────────────────────────────────────────────
 
 export const createAdminUser = async (req, res) => {
   try {
@@ -60,8 +55,6 @@ export const createAdminUser = async (req, res) => {
   }
 };
 
-// ── UPDATE ────────────────────────────────────────────────────────────────────
-
 export const updateAdminUser = async (req, res) => {
   try {
     const { name, email, password, location } = req.body;
@@ -74,7 +67,7 @@ export const updateAdminUser = async (req, res) => {
     if (name)     user.name     = name;
     if (email)    user.email    = email.toLowerCase();
     if (location !== undefined) user.location = location;
-    if (password) user.password = password; // pre-save hook hashea
+    if (password) user.password = password;
 
     await user.save();
 
@@ -84,8 +77,6 @@ export const updateAdminUser = async (req, res) => {
     res.status(500).json({ message: 'Error al actualizar el propietario.', error: error.message });
   }
 };
-
-// ── DELETE ────────────────────────────────────────────────────────────────────
 
 export const deleteAdminUser = async (req, res) => {
   try {
@@ -100,8 +91,6 @@ export const deleteAdminUser = async (req, res) => {
     res.status(500).json({ message: 'Error al eliminar el propietario.', error: error.message });
   }
 };
-
-// ── TOGGLE STATUS ─────────────────────────────────────────────────────────────
 
 export const toggleAdminStatus = async (req, res) => {
   try {
@@ -119,7 +108,6 @@ export const toggleAdminStatus = async (req, res) => {
     user.status = status;
     await user.save();
 
-    // Cascada: suspender/reactivar el complejo y sus canchas
     const complex = await Complex.findOne({ owner: user._id });
     if (complex) {
       if (status === 'suspended') {
@@ -139,8 +127,6 @@ export const toggleAdminStatus = async (req, res) => {
   }
 };
 
-// ── STATS ─────────────────────────────────────────────────────────────────────
-
 export const getStats = async (req, res) => {
   try {
     const now = new Date();
@@ -156,14 +142,12 @@ export const getStats = async (req, res) => {
       totalComplexes,
       activeUsers,
       monthlyReservations,
-      annualRevenue: 0, // placeholder hasta integrar revenue real
+      annualRevenue: 0,
     });
   } catch (error) {
     res.status(500).json({ message: 'Error obteniendo estadísticas.', error: error.message });
   }
 };
-
-// ── APPROVE / REJECT (existentes) ─────────────────────────────────────────────
 
 export const approveAdmin = async (req, res) => {
   try {

@@ -16,9 +16,9 @@ async function getSchedule(req, res) {
                 return res.status(403).json({massage: 'el usuario no tiene complejo asignado'})
 
             }
-        } 
+        }
         const data = await getScheduleWithMetrics(complexId)
-        res.json(data)    
+        res.json(data)
     } catch (error) {
         res.status(500).json({
             message: error.message
@@ -60,7 +60,7 @@ async function updateScheduleConfig(req, res) {
             massage: error.massage
         })
     }
-    
+
 }
 
 export {

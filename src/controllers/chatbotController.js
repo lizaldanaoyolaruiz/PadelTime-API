@@ -25,9 +25,8 @@ function getOrCreateSession(clientSessionId) {
   return { sessionId, session: s };
 }
 
-// English days for court.schedule keys
 const DAY_MAP_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-// Spanish days for Blockout.dayOfWeek field
+
 const DAY_MAP_ES = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 
 function addOneHour(time) {
@@ -83,7 +82,6 @@ async function buscarAlternativas({ complexId, date, dayEN, blockouts, courts, e
     weekday: 'long', day: 'numeric', month: 'long',
   });
 
-  // Fetch all bookings for that day at once
   const allBookings = await Booking.find({
     complex: complexId,
     date,
@@ -101,7 +99,6 @@ async function buscarAlternativas({ complexId, date, dayEN, blockouts, courts, e
 
     if (slotStart === excludeTime) continue;
 
-    // No sugerir horarios pasados para el día de hoy
     if (date === nowAR.date && h * 60 < nowAR.totalMinutes) continue;
 
     const globallyBlocked = blockouts.some(b => !b.courtId && slotOverlapsBlockout(slotStart, slotEnd, b));
@@ -158,7 +155,7 @@ async function buscarAlternativas({ complexId, date, dayEN, blockouts, courts, e
 
 async function executeVerificarDisponibilidad({ complexId, date, startTime, courtType }) {
   try {
-    // Rechazar fechas u horarios ya transcurridos
+
     const nowAR = getNowArgentina();
     if (date < nowAR.date || (date === nowAR.date && timeToMinutes(startTime) < nowAR.totalMinutes)) {
       return {
@@ -174,14 +171,12 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
 
     const endTime = addOneHour(startTime);
 
-    // 1. Complex opening hours
     const openMin  = timeToMinutes(complex.openTime  || '00:00');
     const closeMin = timeToMinutes(complex.closeTime || '00:00') || 24 * 60;
     const startMin = timeToMinutes(startTime);
     const endMin   = timeToMinutes(endTime) || 24 * 60;
     const isWithinHours = startMin >= openMin && endMin <= closeMin;
 
-    // 2. Get enabled courts
     const query = { complex: complexId, enabled: true };
     if (courtType && courtType !== 'any') query.type = courtType;
     const courts = await Court.find(query).lean();
@@ -190,10 +185,8 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
     const dayEN    = DAY_MAP_EN[dateObj.getDay()];
     const dayES    = DAY_MAP_ES[dateObj.getDay()];
 
-    // Courts with schedule active for that day
     const scheduledCourts = courts.filter(c => c.schedule?.[dayEN]?.enabled !== false);
 
-    // Courts whose own schedule covers this slot
     const openCourts = scheduledCourts.filter(c => {
       const courtOpen  = c.schedule?.[dayEN]?.start || complex.openTime || '00:00';
       const courtClose = c.schedule?.[dayEN]?.end   || complex.closeTime || '00:00';
@@ -202,7 +195,6 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
       return startMin >= coMin && endMin <= ccMin;
     });
 
-    // 3. Blockouts active for this date/day
     const blockouts = await Blockout.find({
       complexId,
       isActive: true,
@@ -213,7 +205,6 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
       ],
     }).lean();
 
-    // Determine blocked courts at this slot
     let allCourtsBlocked = false;
     const blockedCourtIds = new Set();
     let motivoBloqueo = null;
@@ -231,7 +222,6 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
       }
     }
 
-    // 4. Booked courts at this slot
     const bookedCourtIds = await Booking.distinct('court', {
       complex: complexId,
       date,
@@ -239,7 +229,6 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
       status: { $in: ['pending', 'confirmed'] },
     });
 
-    // 5. Available courts
     let available = [];
     if (isWithinHours && !allCourtsBlocked) {
       available = openCourts.filter(c => {
@@ -251,14 +240,13 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
       });
     }
 
-    // 6. Reason for unavailability
     let razonNoDisponible = null;
     if (available.length === 0) {
       if (scheduledCourts.length === 0) {
-        // All courts have that day disabled in their schedule
+
         razonNoDisponible = 'cancha_cerrada';
       } else if (!isWithinHours || openCourts.length === 0) {
-        // Outside complex hours or outside all courts' operating hours for that slot
+
         razonNoDisponible = 'fuera_de_horario';
       } else if (allCourtsBlocked || blockedCourtIds.size > 0) {
         razonNoDisponible = 'bloqueado_mantenimiento';
@@ -267,7 +255,6 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
       }
     }
 
-    // 7. Suggest alternatives when unavailable
     let alternativasSugeridas = [];
     if (available.length === 0) {
       alternativasSugeridas = await buscarAlternativas({
@@ -279,7 +266,6 @@ async function executeVerificarDisponibilidad({ complexId, date, startTime, cour
       });
     }
 
-    // 8. Build response
     const FRONTEND_URL    = process.env.FRONTEND_URL || 'http://localhost:5173';
     const whatsappNum     = cleanWhatsappNumber(complex.whatsapp);
     const fechaFormateada = new Date(`${date}T12:00:00`).toLocaleDateString('es-AR', {

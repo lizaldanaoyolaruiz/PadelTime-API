@@ -186,7 +186,7 @@ export const getBookingById = async (req, res) => {
       .populate('player', '_id name')
       .lean();
     if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
-    // Only allow the player who owns it or admin/superadmin
+
     if (req.user.role === 'player' && reserva.player?._id?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Acceso denegado.' });
     }
@@ -246,7 +246,6 @@ export const createBooking = async (req, res) => {
       endTime: { $gt: horaInicio },
     });
 
-    // Auto-cancel pending MP bookings: same player retrying, or abandoned > 5 min
     if (conflicto && conflicto.status === 'pending' && conflicto.confirmationMethod === 'mercadopago') {
       const samePlayer = req.user && conflicto.player && conflicto.player.toString() === req.user._id.toString();
       const minutosTranscurridos = (Date.now() - new Date(conflicto.createdAt).getTime()) / 60000;
@@ -447,17 +446,14 @@ export const confirmarPago = async (req, res) => {
       return res.status(400).json({ message: 'Esta reserva no es de MercadoPago.' });
     }
 
-    // Already confirmed — idempotent
     if (reserva.status === 'confirmed') {
       return res.json({ booking: reserva });
     }
 
-    // Payment still processing — leave booking as pending
     if (['pending', 'in_process'].includes(collectionStatus)) {
       return res.json({ booking: reserva, pending: true });
     }
 
-    // MP explicitly said the payment failed — cancel to free the slot
     if (['rejected', 'cancelled', 'null'].includes(collectionStatus)) {
       if (reserva.status === 'pending') {
         reserva.status = 'cancelled';
@@ -466,7 +462,6 @@ export const confirmarPago = async (req, res) => {
       return res.status(400).json({ message: 'El pago no fue aprobado. Podés intentarlo nuevamente.' });
     }
 
-    // Confirmed OR status unknown (trust back_urls.success redirect)
     if (paymentId) reserva.paymentId = paymentId;
     reserva.status = 'confirmed';
     await reserva.save();
@@ -586,8 +581,6 @@ export const cancelarReserva = async (req, res) => {
   }
 };
 
-// ── EDITAR RESERVA (jugador) ───────────────────────────────────────────────────
-
 export const editarReserva = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id);
@@ -620,7 +613,6 @@ export const editarReserva = async (req, res) => {
       return res.status(400).json({ message: 'No se puede reservar en una fecha pasada.' });
     }
 
-    // Verificar que el slot no esté ocupado por otra reserva
     const conflicto = await Booking.findOne({
       _id: { $ne: reserva._id },
       court: reserva.court,
@@ -637,7 +629,7 @@ export const editarReserva = async (req, res) => {
     reserva.date      = date;
     reserva.startTime = startTime;
     reserva.endTime   = endTime;
-    reserva.status    = 'pending'; // vuelve a pendiente al modificar
+    reserva.status    = 'pending';
     await reserva.save();
 
     await reserva.populate([
@@ -651,8 +643,6 @@ export const editarReserva = async (req, res) => {
     return res.status(500).json({ message: 'Error al editar la reserva.', error: error.message });
   }
 };
-
-// ── ELIMINAR RESERVA (jugador) ────────────────────────────────────────────────
 
 export const eliminarReserva = async (req, res) => {
   try {

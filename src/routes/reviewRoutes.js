@@ -1,26 +1,13 @@
 import { Router } from 'express';
-import { body } from 'express-validator';
 import {
   createReview, getComplexReviews, canReview, getOwnerReviews, updateReview, deleteReview,
 } from '../controllers/reviewController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { requireRole } from '../middlewares/roleMiddleware.js';
 import validate from '../middlewares/validateMiddleware.js';
+import { reviewRules, updateReviewRules } from '../middlewares/reviewValidationMiddleware.js';
 
 const router = Router();
-
-const reviewRules = [
-  body('complexId').notEmpty().withMessage('complexId is required.'),
-  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5.'),
-  body('comment').optional().trim().isLength({ max: 1000 }).withMessage('Comment must be at most 1000 characters.'),
-  body('tags').optional().isArray().withMessage('Tags must be an array.'),
-];
-
-const updateReviewRules = [
-  body('rating').optional().isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5.'),
-  body('comment').optional().trim().isLength({ max: 1000 }).withMessage('Comment must be at most 1000 characters.'),
-  body('tags').optional().isArray().withMessage('Tags must be an array.'),
-];
 
 router.get('/complex/:complexId', getComplexReviews);
 

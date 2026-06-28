@@ -56,13 +56,11 @@ export const getPublicComplexes = async (req, res) => {
       return res.json({ complexes: [] });
     }
 
-    // Traer todas las canchas habilitadas de esos complejos
     const ids = complejos.map(c => c._id);
     const canchas = await Court.find({ complex: { $in: ids }, enabled: true })
       .select('complex type features pricePerHour schedule')
       .lean();
 
-    // Agrupar canchas por complejo
     const canchasPorComplejo = {};
     for (const cancha of canchas) {
       const id = cancha.complex.toString();
@@ -72,7 +70,6 @@ export const getPublicComplexes = async (req, res) => {
 
     const tipoEnEspanol = { crystal: 'Cristal', panoramic: 'Panorámica' };
 
-    // Devuelve las franjas horarias que cubre una cancha según su horario
     const getFranjasDeCancha = (cancha) => {
       const franjas = [];
       const dias = Object.values(cancha.schedule || {});
@@ -90,17 +87,14 @@ export const getPublicComplexes = async (req, res) => {
       return franjas;
     };
 
-    // Armar la respuesta enriquecida con datos de canchas
     const resultado = complejos.map(complejo => {
       const canchasDelComplejo = canchasPorComplejo[complejo._id.toString()] || [];
 
-      // Precio: se usa el del complejo como valor principal; canchas como fallback
       const precios = canchasDelComplejo
         .filter(c => c.pricePerHour > 0)
         .map(c => c.pricePerHour);
       const precioPorHora = complejo.price || (precios.length > 0 ? Math.min(...precios) : 0);
 
-      // Features únicas de todas las canchas
       const features = [];
       for (const cancha of canchasDelComplejo) {
         for (const feature of (cancha.features || [])) {
@@ -108,14 +102,12 @@ export const getPublicComplexes = async (req, res) => {
         }
       }
 
-      // Tipos de cancha únicos traducidos al español
       const courtTypes = [];
       for (const cancha of canchasDelComplejo) {
         const tipo = tipoEnEspanol[cancha.type] || cancha.type;
         if (!courtTypes.includes(tipo)) courtTypes.push(tipo);
       }
 
-      // Franjas horarias disponibles en el complejo
       const franjas = [];
       for (const cancha of canchasDelComplejo) {
         for (const franja of getFranjasDeCancha(cancha)) {
@@ -152,7 +144,7 @@ export const getPublicComplexById = async (req, res) => {
 export const createComplex = async (req, res) => {
   try {
     const exists = await Complex.findOne({ owner: req.user._id });
-    if (exists) return res.status(400).json({ message: 'You already have a registered complex.' });
+    if (exists) return res.status(400).json({ message: 'Ya tenés un complejo registrado.' });
 
     const { name, address, city, description, whatsapp, instagram, depositPercentage, price, openTime, closeTime } = req.body;
 
@@ -165,7 +157,10 @@ export const createComplex = async (req, res) => {
 
     res.status(201).json({ complex });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating complex.', error: error.message });
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Error al crear el complejo.', error: error.message });
   }
 };
 
@@ -525,7 +520,6 @@ export const updateConfig = async (req, res) => {
     const { complexId } = req.params;
     const { onlineStatus, publicBookingEnabled, openTime, closeTime } = req.body;
 
-    // Validar permisos según rol (similar a otros controladores)
     const complex = await Complex.findByIdAndUpdate(
       complexId,
       { onlineStatus, publicBookingEnabled, openTime, closeTime },

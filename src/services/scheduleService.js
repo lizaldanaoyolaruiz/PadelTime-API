@@ -12,7 +12,7 @@ async function getScheduleWithMetrics (complexId)  {
     const blockedHours = getBlockedHoursPerWeek(blockout, schedule.openingDays, schedule.openTime, schedule.closeTime)
     const efficiency = weeklyHours > 0 ? ((weeklyHours - blockedHours) / weeklyHours) * 100 : 0
 
-    return{ 
+    return{
         schedule,
         blockout,
         metrics: {
@@ -34,5 +34,5 @@ async function updateSchedule(complexId, updateData, userId) {
 
 export{
     getScheduleWithMetrics,
-    updateSchedule   
+    updateSchedule
 }

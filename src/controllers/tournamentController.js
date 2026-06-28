@@ -1,4 +1,4 @@
-import Torneo from '../models/Torneo.js';
+import Tournament from '../models/Tournament.js';
 import Complex from '../models/Complex.js';
 
 const POPULATE_COMPLEJO = { path: 'complejo', select: 'name' };
@@ -10,7 +10,7 @@ export const getTorneos = async (req, res) => {
     if (estado && ['activo', 'finalizado', 'cancelado'].includes(estado)) {
       filter.estado = estado;
     }
-    const torneos = await Torneo.find(filter)
+    const torneos = await Tournament.find(filter)
       .populate(POPULATE_COMPLEJO)
       .sort({ fechaInicio: 1 });
     res.json({ torneos });
@@ -21,7 +21,7 @@ export const getTorneos = async (req, res) => {
 
 export const getTorneoById = async (req, res) => {
   try {
-    const torneo = await Torneo.findById(req.params.id).populate(POPULATE_COMPLEJO);
+    const torneo = await Tournament.findById(req.params.id).populate(POPULATE_COMPLEJO);
     if (!torneo) return res.status(404).json({ message: 'Torneo no encontrado.' });
     res.json({ torneo });
   } catch {
@@ -36,7 +36,7 @@ export const createTorneo = async (req, res) => {
       return res.status(400).json({ message: 'La fecha de fin no puede ser anterior a la de inicio.' });
     }
     const complex = await Complex.findOne({ owner: req.user._id });
-    const torneo = await Torneo.create({
+    const torneo = await Tournament.create({
       ...req.body,
       complejo: complex?._id ?? undefined,
     });
@@ -49,7 +49,7 @@ export const createTorneo = async (req, res) => {
 
 export const updateTorneo = async (req, res) => {
   try {
-    const existing = await Torneo.findById(req.params.id);
+    const existing = await Tournament.findById(req.params.id);
     if (!existing) return res.status(404).json({ message: 'Torneo no encontrado.' });
 
     const fechaInicio = req.body.fechaInicio ?? existing.fechaInicio;
@@ -58,7 +58,7 @@ export const updateTorneo = async (req, res) => {
       return res.status(400).json({ message: 'La fecha de fin no puede ser anterior a la de inicio.' });
     }
 
-    const torneo = await Torneo.findByIdAndUpdate(
+    const torneo = await Tournament.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
@@ -71,7 +71,7 @@ export const updateTorneo = async (req, res) => {
 
 export const deleteTorneo = async (req, res) => {
   try {
-    const torneo = await Torneo.findByIdAndDelete(req.params.id);
+    const torneo = await Tournament.findByIdAndDelete(req.params.id);
     if (!torneo) return res.status(404).json({ message: 'Torneo no encontrado.' });
     res.json({ message: 'Torneo eliminado correctamente.' });
   } catch {

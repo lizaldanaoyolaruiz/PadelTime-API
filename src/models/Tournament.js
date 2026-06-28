@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const torneoSchema = new mongoose.Schema(
+const tournamentSchema = new mongoose.Schema(
   {
     nombre: { type: String, required: true, trim: true, maxlength: 100 },
     descripcion: { type: String, trim: true, maxlength: 500 },
@@ -24,4 +24,4 @@ const torneoSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('Torneo', torneoSchema);
+export default mongoose.model('Torneo', tournamentSchema);

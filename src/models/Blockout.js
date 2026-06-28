@@ -23,7 +23,7 @@ const blockoutSchema = new mongoose.Schema({
         default: null
     },
     date: {
-        type: String, // YYYY-MM-DD, solo para recurrence 'once'
+        type: String,
         default: null
     },
     startTime:{type: String, required: true},
