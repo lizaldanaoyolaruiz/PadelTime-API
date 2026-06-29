@@ -62,45 +62,101 @@ Se conecta a **MongoDB Atlas** como base de datos, utiliza **Cloudinary** para e
 ## 📁 Estructura del Proyecto
 
 ```
-PadelTime-API/
-├── src/
-│   ├── config/
-│   │   ├── db.js               # Conexión a MongoDB Atlas
-│   │   ├── cloudinary.js       # Config Cloudinary
-│   │   └── nodemailer.js       # Config SMTP
-│   ├── controllers/
-│   │   ├── auth.controller.js
-│   │   ├── complex.controller.js
-│   │   ├── court.controller.js
-│   │   ├── reservation.controller.js
-│   │   ├── tournament.controller.js
-│   │   └── payment.controller.js
-│   ├── middlewares/
-│   │   ├── auth.middleware.js   # Verificación JWT
-│   │   ├── role.middleware.js   # Control de roles
-│   │   └── upload.middleware.js # Multer + Cloudinary
-│   ├── models/
-│   │   ├── User.js
-│   │   ├── Complex.js
-│   │   ├── Court.js
-│   │   ├── Tournament.js
-│   │   └── Reservation.js
-│   ├── routes/
-│   │   ├── auth.routes.js
-│   │   ├── complex.routes.js
-│   │   ├── court.routes.js
-│   │   ├── reservation.routes.js
-│   │   ├── tournament.routes.js
-│   │   └── payment.routes.js
-│   └── services/
-│       ├── email.service.js
-│       ├── cloudinary.service.js
-│       └── mercadopago.service.js
-├── index.js
-├── vercel.json
-├── .env
-├── .gitignore
-└── package.json
+📁 BACKEND — PadelTime-API
+│
+├── server.js
+├── package.json
+│
+└── src/
+    │
+    ├── config/
+    │   ├── db.js
+    │   ├── cloudinary.js
+    │   └── chatbotPrompt.js
+    │
+    ├── controllers/
+    │   ├── adminController.js
+    │   ├── authController.js
+    │   ├── blockoutController.js
+    │   ├── bookingController.js
+    │   ├── chatbotController.js
+    │   ├── complexController.js
+    │   ├── contactController.js
+    │   ├── courtController.js
+    │   ├── favoriteController.js
+    │   ├── maintenanceController.js
+    │   ├── metricsController.js
+    │   ├── paymentController.js
+    │   ├── reportController.js
+    │   ├── reviewController.js
+    │   ├── scheduleController.js
+    │   ├── tournamentController.js
+    │   └── userController.js
+    │
+    ├── middlewares/
+    │   ├── authMiddleware.js
+    │   ├── roleMiddleware.js
+    │   ├── validateMiddleware.js
+    │   ├── uploadMiddleware.js
+    │   ├── resolveNameMiddleware.js
+    │   ├── adminValidationMiddleware.js
+    │   ├── authValidationMiddleware.js
+    │   ├── complexValidationMiddleware.js
+    │   ├── contactValidationMiddleware.js
+    │   ├── courtValidationMiddleware.js
+    │   ├── reviewValidationMiddleware.js
+    │   └── tournamentValidationMiddleware.js
+    │
+    ├── models/
+    │   ├── User.js
+    │   ├── Complex.js
+    │   ├── Court.js
+    │   ├── Booking.js
+    │   ├── Schedule.js
+    │   ├── Blockout.js
+    │   ├── MaintenanceSlot.js
+    │   ├── Review.js
+    │   ├── Tournament.js
+    │   └── ActivityLog.js
+    │
+    ├── routes/
+    │   ├── index.js
+    │   ├── adminRoutes.js
+    │   ├── authRoutes.js
+    │   ├── blockoutRoutes.js
+    │   ├── bookingRoutes.js
+    │   ├── chatbotRoutes.js
+    │   ├── complexRoutes.js
+    │   ├── contactRoutes.js
+    │   ├── courtRoutes.js
+    │   ├── favoriteRoutes.js
+    │   ├── maintenanceRoutes.js
+    │   ├── metricsRoutes.js
+    │   ├── paymentRoutes.js
+    │   ├── reportRoutes.js
+    │   ├── reviewRoutes.js
+    │   ├── tournamentRoutes.js
+    │   └── userRoutes.js
+    │
+    ├── services/
+    │   ├── emailService.js
+    │   ├── exportService.js
+    │   ├── metricsService.js
+    │   ├── mpService.js
+    │   └── scheduleService.js
+    │
+    ├── utils/
+    │   ├── encryption.js
+    │   ├── generateToken.js
+    │   └── timeHelpers.js
+    │
+    ├── db/
+    │   └── seed.js
+    │
+    └── scripts/
+        ├── diagnoseMp.js
+        └── setupMpToken.js
+
 ```
 
 ---
