@@ -1,0 +1,36 @@
+import mongoose from 'mongoose';
+
+const complexSchema = new mongoose.Schema(
+  {
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    name: { type: String, required: true, trim: true },
+    location: { type: String, trim: true },
+    city: { type: String, trim: true, enum: ['San Miguel de Tucumán', 'Yerba Buena', 'Tafí Viejo'] },
+    description: { type: String, trim: true },
+    image: { type: String },
+    photos: { type: [String], default: [] },
+    price: { type: Number },
+    openTime: { type: String },
+    closeTime: { type: String },
+    whatsapp: { type: String, trim: true },
+    instagram: { type: String, trim: true },
+    mercadopagoPublicKey: { type: String, select: false },
+
+    mpAccessToken: { type: String, select: false },
+    mercadopagoActive: { type: Boolean, default: false },
+    depositPercentage: { type: Number, min: 0, max: 100, default: 30 },
+    ratingAverage: { type: Number, default: 0 },
+    ratingCount: { type: Number, default: 0 },
+    isFeatured: { type: Boolean, default: false },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected', 'suspended'],
+      default: 'pending',
+    },
+    rejectReason: { type: String },
+    observations: { type: String, trim: true },
+  },
+  { timestamps: true }
+);
+
+export default mongoose.model('Complex', complexSchema);
