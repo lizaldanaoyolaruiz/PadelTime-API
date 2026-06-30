@@ -111,7 +111,7 @@ export const getPublicCourts = async (req, res) => {
 
 export const getPublicCourtById = async (req, res) => {
   try {
-    const court = await Court.findById(req.params.id);
+    const court = await Court.findById(req.params.id).populate('complex', 'price name');
     if (!court || !court.enabled) return res.status(404).json({ message: 'Court not found.' });
     res.json({ court });
   } catch (error) {
