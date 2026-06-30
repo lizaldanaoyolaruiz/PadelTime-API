@@ -1,11 +1,19 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const complexSchema = new mongoose.Schema(
   {
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     name: { type: String, required: true, trim: true },
     location: { type: String, trim: true },
-    city: { type: String, trim: true, enum: ['San Miguel de Tucumán', 'Yerba Buena', 'Tafí Viejo'] },
+    city: {
+      type: String,
+      trim: true,
+      enum: ["San Miguel de Tucumán", "Yerba Buena", "Tafí Viejo"],
+    },
     description: { type: String, trim: true },
     image: { type: String },
     photos: { type: [String], default: [] },
@@ -24,13 +32,13 @@ const complexSchema = new mongoose.Schema(
     isFeatured: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'suspended'],
-      default: 'pending',
+      enum: ["pending", "approved", "rejected", "suspended"],
+      default: "pending",
     },
     rejectReason: { type: String },
     observations: { type: String, trim: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default mongoose.model('Complex', complexSchema);
+export default mongoose.model("Complex", complexSchema);

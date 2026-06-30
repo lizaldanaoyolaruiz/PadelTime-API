@@ -1,18 +1,21 @@
-import crypto from 'crypto';
-import { Readable } from 'stream';
-import User from '../models/User.js';
-import cloudinary from '../config/cloudinary.js';
+import crypto from "crypto";
+import { Readable } from "stream";
+import User from "../models/User.js";
+import cloudinary from "../config/cloudinary.js";
 
 const uploadToCloudinary = (buffer, folder) =>
   new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder, width: 400, height: 400, crop: 'fill' },
-      (error, result) => { if (error) return reject(error); resolve(result); }
+      { folder, width: 400, height: 400, crop: "fill" },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      },
     );
     Readable.from(buffer).pipe(stream);
   });
-import generateToken from '../utils/generateToken.js';
-import { sendVerificationEmail } from '../services/emailService.js';
+import generateToken from "../utils/generateToken.js";
+import { sendVerificationEmail } from "../services/emailService.js";
 
 const formatUser = (user) => ({
   id: user._id,
@@ -21,7 +24,7 @@ const formatUser = (user) => ({
   role: user.role,
   status: user.status,
   isVerified: user.isVerified,
-  avatar: user.avatar || '',
+  avatar: user.avatar || "",
   ...(user.complexId && { complexId: user.complexId }),
 });
 
@@ -30,77 +33,104 @@ export const register = async (req, res) => {
     const { name, email, password, role } = req.body;
 
     const exists = await User.findOne({ email });
-    if (exists) return res.status(400).json({ message: 'Email already registered.' });
+    if (exists)
+      return res.status(400).json({ message: "Email already registered." });
 
-    const assignedRole = role === 'admin' ? 'admin' : 'player';
+    const assignedRole = role === "admin" ? "admin" : "player";
     const userData = { name, email, password, role: assignedRole };
 
-    if (assignedRole === 'player') {
-      const token = crypto.randomBytes(32).toString('hex');
+    if (assignedRole === "player") {
+      const token = crypto.randomBytes(32).toString("hex");
       userData.verificationToken = token;
       userData.isVerified = false;
-      userData.status = 'approved';
+      userData.status = "approved";
 
       const user = await User.create(userData);
       try {
         await sendVerificationEmail(user, token);
       } catch (err) {
-        console.error('[email] Verification error:', err.message);
+        console.error("[email] Verification error:", err.message);
       }
 
       return res.status(201).json({
-        message: 'Account created. Please verify your email before logging in.',
+        message: "Account created. Please verify your email before logging in.",
       });
     }
 
     userData.isVerified = true;
-    userData.status = 'approved';
+    userData.status = "approved";
 
     const user = await User.create(userData);
     const token = generateToken(user);
 
-    res.status(201).json({ message: 'Admin account created.', token, user: formatUser(user) });
+    res
+      .status(201)
+      .json({
+        message: "Admin account created.",
+        token,
+        user: formatUser(user),
+      });
   } catch (error) {
-    res.status(500).json({ message: 'Error registering user.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error registering user.", error: error.message });
   }
 };
 
 export const resendVerification = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ message: 'Email is required.' });
+    if (!email) return res.status(400).json({ message: "Email is required." });
 
-    const user = await User.findOne({ email }).select('+verificationToken');
-    if (!user) return res.status(404).json({ message: 'No account found with that email.' });
-    if (user.isVerified) return res.status(400).json({ message: 'This account is already verified.' });
+    const user = await User.findOne({ email }).select("+verificationToken");
+    if (!user)
+      return res
+        .status(404)
+        .json({ message: "No account found with that email." });
+    if (user.isVerified)
+      return res
+        .status(400)
+        .json({ message: "This account is already verified." });
 
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString("hex");
     user.verificationToken = token;
     await user.save();
 
     await sendVerificationEmail(user, token);
 
-    res.json({ message: 'Verification email resent. Please check your inbox.' });
+    res.json({
+      message: "Verification email resent. Please check your inbox.",
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error resending verification email.', error: error.message });
+    res
+      .status(500)
+      .json({
+        message: "Error resending verification email.",
+        error: error.message,
+      });
   }
 };
 
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
-    if (!token) return res.status(400).json({ message: 'Token is required.' });
+    if (!token) return res.status(400).json({ message: "Token is required." });
 
-    const user = await User.findOne({ verificationToken: token }).select('+verificationToken');
-    if (!user) return res.status(400).json({ message: 'Invalid or expired token.' });
+    const user = await User.findOne({ verificationToken: token }).select(
+      "+verificationToken",
+    );
+    if (!user)
+      return res.status(400).json({ message: "Invalid or expired token." });
 
     user.isVerified = true;
     user.verificationToken = undefined;
     await user.save();
 
-    res.json({ message: 'Email verified successfully. You can now log in.' });
+    res.json({ message: "Email verified successfully. You can now log in." });
   } catch (error) {
-    res.status(500).json({ message: 'Error verifying email.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error verifying email.", error: error.message });
   }
 };
 
@@ -108,19 +138,23 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select("+password");
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
+      return res.status(401).json({ message: "Invalid credentials." });
     }
 
-    if (user.role === 'player' && !user.isVerified) {
-      return res.status(403).json({ message: 'Please verify your email before logging in.' });
+    if (user.role === "player" && !user.isVerified) {
+      return res
+        .status(403)
+        .json({ message: "Please verify your email before logging in." });
     }
 
     const token = generateToken(user);
     res.json({ token, user: formatUser(user) });
   } catch (error) {
-    res.status(500).json({ message: 'Error logging in.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error logging in.", error: error.message });
   }
 };
 
@@ -131,43 +165,57 @@ export const getMe = async (req, res) => {
 export const updateMe = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    const user = await User.findById(req.user._id).select('+password');
-    if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user)
+      return res.status(404).json({ message: "Usuario no encontrado." });
 
-    if (name)  user.name  = name;
+    if (name) user.name = name;
     if (email) user.email = email.toLowerCase();
     if (password) user.password = password;
 
     await user.save();
     res.json({ user: formatUser(user) });
   } catch (error) {
-    res.status(500).json({ message: 'Error al actualizar el perfil.', error: error.message });
+    res
+      .status(500)
+      .json({
+        message: "Error al actualizar el perfil.",
+        error: error.message,
+      });
   }
 };
 
 export const deleteMe = async (req, res) => {
   try {
     await User.findByIdAndDelete(req.user._id);
-    res.json({ message: 'Cuenta eliminada correctamente.' });
+    res.json({ message: "Cuenta eliminada correctamente." });
   } catch (error) {
-    res.status(500).json({ message: 'Error al eliminar la cuenta.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al eliminar la cuenta.", error: error.message });
   }
 };
 
 export const uploadAvatar = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'No se recibió ninguna imagen.' });
+    if (!req.file)
+      return res.status(400).json({ message: "No se recibió ninguna imagen." });
 
-    const result = await uploadToCloudinary(req.file.buffer, 'padeltime/avatars');
+    const result = await uploadToCloudinary(
+      req.file.buffer,
+      "padeltime/avatars",
+    );
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { avatar: result.secure_url },
-      { new: true }
+      { new: true },
     );
 
     res.json({ user: formatUser(user) });
   } catch (error) {
-    res.status(500).json({ message: 'Error al subir la imagen.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al subir la imagen.", error: error.message });
   }
 };

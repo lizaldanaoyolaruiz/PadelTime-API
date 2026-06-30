@@ -5,19 +5,27 @@ import Court from "../models/Court.js";
 
 function getDatesToCheck(recurrence, date, dayOfWeek) {
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const DAY_NAMES = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+  const todayStr = today.toISOString().split("T")[0];
+  const DAY_NAMES = [
+    "domingo",
+    "lunes",
+    "martes",
+    "miercoles",
+    "jueves",
+    "viernes",
+    "sabado",
+  ];
 
-  if (recurrence === 'once') return date ? [date] : [];
+  if (recurrence === "once") return date ? [date] : [];
 
   const dates = [];
   for (let i = 0; i < 28; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const ds = d.toISOString().split('T')[0];
-    if (recurrence === 'daily') {
+    const ds = d.toISOString().split("T")[0];
+    if (recurrence === "daily") {
       dates.push(ds);
-    } else if (recurrence === 'weekly') {
+    } else if (recurrence === "weekly") {
       if (DAY_NAMES[d.getDay()] === dayOfWeek) dates.push(ds);
     }
   }
@@ -38,7 +46,10 @@ async function getBlockouts(req, res) {
       complexId = req.user.complexId;
       if (!complexId) {
         const owned = await Complex.findOne({ owner: req.user._id });
-        if (!owned) return res.status(403).json({ message: 'Usuario sin complejo asignado' });
+        if (!owned)
+          return res
+            .status(403)
+            .json({ message: "Usuario sin complejo asignado" });
         complexId = owned._id;
       }
     }
@@ -65,7 +76,10 @@ async function createBlockout(req, res) {
       complexId = req.user.complexId;
       if (!complexId) {
         const owned = await Complex.findOne({ owner: req.user._id });
-        if (!owned) return res.status(403).json({ message: 'Usuario sin complejo asignado' });
+        if (!owned)
+          return res
+            .status(403)
+            .json({ message: "Usuario sin complejo asignado" });
         complexId = owned._id;
       }
     }
@@ -73,7 +87,8 @@ async function createBlockout(req, res) {
       req.body;
     if (!name || !recurrence || !startTime || !endTime) {
       return res.status(400).json({
-        message: "Faltan campos obligatorios (name, recurrence, startTime, endTime)",
+        message:
+          "Faltan campos obligatorios (name, recurrence, startTime, endTime)",
       });
     }
     if (recurrence === "weekly" && !dayOfWeek) {
@@ -83,7 +98,8 @@ async function createBlockout(req, res) {
     }
     if (recurrence === "once" && !date) {
       return res.status(400).json({
-        message: "Para bloqueos de fecha específica, date es obligatorio (YYYY-MM-DD)",
+        message:
+          "Para bloqueos de fecha específica, date es obligatorio (YYYY-MM-DD)",
       });
     }
     let courtDoc = null;
@@ -93,19 +109,34 @@ async function createBlockout(req, res) {
         return res.status(403).json({ message: "La cancha no existe" });
       }
       if (courtDoc.complex.toString() !== complexId.toString()) {
-        return res.status(400).json({ message: "La cancha no pertenece a este complejo" });
+        return res
+          .status(400)
+          .json({ message: "La cancha no pertenece a este complejo" });
       }
 
       const DAY_ES_TO_EN = {
-        lunes: 'monday', martes: 'tuesday', miercoles: 'wednesday',
-        jueves: 'thursday', viernes: 'friday', sabado: 'saturday', domingo: 'sunday',
+        lunes: "monday",
+        martes: "tuesday",
+        miercoles: "wednesday",
+        jueves: "thursday",
+        viernes: "friday",
+        sabado: "saturday",
+        domingo: "sunday",
       };
-      const JS_TO_DAY = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+      const JS_TO_DAY = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+      ];
 
       let daysToValidate = [];
-      if (recurrence === 'once' && date) {
-        daysToValidate = [JS_TO_DAY[new Date(date + 'T12:00:00').getDay()]];
-      } else if (recurrence === 'weekly' && dayOfWeek) {
+      if (recurrence === "once" && date) {
+        daysToValidate = [JS_TO_DAY[new Date(date + "T12:00:00").getDay()]];
+      } else if (recurrence === "weekly" && dayOfWeek) {
         const k = DAY_ES_TO_EN[dayOfWeek];
         if (k) daysToValidate = [k];
       }
@@ -113,7 +144,12 @@ async function createBlockout(req, res) {
       for (const dayKey of daysToValidate) {
         const ds = courtDoc.schedule?.[dayKey];
         if (!ds?.enabled) {
-          return res.status(400).json({ message: 'La cancha está cerrada ese día. No se puede crear un bloqueo.' });
+          return res
+            .status(400)
+            .json({
+              message:
+                "La cancha está cerrada ese día. No se puede crear un bloqueo.",
+            });
         }
         if (startTime < ds.start || endTime > ds.end) {
           return res.status(400).json({
@@ -128,24 +164,34 @@ async function createBlockout(req, res) {
       const bookingFiltro = {
         complex: complexId,
         date: { $in: datesToCheck },
-        status: { $in: ['pending', 'confirmed'] },
+        status: { $in: ["pending", "confirmed"] },
         startTime: { $lt: endTime },
         endTime: { $gt: startTime },
       };
       if (courtId) bookingFiltro.court = courtId;
 
-      console.log('[Blockout] Checking conflicts:', JSON.stringify({ datesToCheck, startTime, endTime, complexId: complexId?.toString(), courtId }));
+      console.log(
+        "[Blockout] Checking conflicts:",
+        JSON.stringify({
+          datesToCheck,
+          startTime,
+          endTime,
+          complexId: complexId?.toString(),
+          courtId,
+        }),
+      );
 
       const reservasConflicto = await Booking.find(bookingFiltro)
-        .populate('player', 'name email')
-        .populate('court', 'name')
+        .populate("player", "name email")
+        .populate("court", "name")
         .lean();
 
-      console.log('[Blockout] Conflicts found:', reservasConflicto.length);
+      console.log("[Blockout] Conflicts found:", reservasConflicto.length);
 
       if (reservasConflicto.length > 0) {
         return res.status(409).json({
-          message: 'Hay reservas activas en ese horario. Cancelalas antes de bloquear.',
+          message:
+            "Hay reservas activas en ese horario. Cancelalas antes de bloquear.",
           bookings: reservasConflicto,
         });
       }
@@ -181,8 +227,13 @@ async function updateBlockout(req, res) {
       });
     }
     if (req.user.role === "admin") {
-      const userComplexId = req.user.complexId || (await Complex.findOne({ owner: req.user._id }))?._id;
-      if (!userComplexId || existBlockout.complexId.toString() !== userComplexId.toString()) {
+      const userComplexId =
+        req.user.complexId ||
+        (await Complex.findOne({ owner: req.user._id }))?._id;
+      if (
+        !userComplexId ||
+        existBlockout.complexId.toString() !== userComplexId.toString()
+      ) {
         return res.status(403).json({
           massage: "No tienes permiso para modificar este bloqueo",
         });
@@ -222,12 +273,14 @@ async function updateBlockout(req, res) {
     if (updateData.courtId) {
       const court = await Court.findById(updateData.courtId);
       if (!court) {
-        return res.status(400).json({ message: 'La cancha no existe' });
+        return res.status(400).json({ message: "La cancha no existe" });
       }
 
       const finalComplexId = updateData.complexId || existBlockout.complexId;
       if (court.complex.toString() !== finalComplexId.toString()) {
-        return res.status(400).json({ message: 'La cancha no pertenece a este complejo' });
+        return res
+          .status(400)
+          .json({ message: "La cancha no pertenece a este complejo" });
       }
     }
     const updatedBlockout = await Blockout.findByIdAndUpdate(id, updateData, {
@@ -248,27 +301,30 @@ export const deleteBlockout = async (req, res) => {
 
     const existingBlockout = await Blockout.findById(id);
     if (!existingBlockout) {
-      return res.status(404).json({ message: 'Bloqueo no encontrado' });
+      return res.status(404).json({ message: "Bloqueo no encontrado" });
     }
 
-    if (req.user.role === 'admin') {
-      const userComplexId = req.user.complexId || (await Complex.findOne({ owner: req.user._id }))?._id;
-      if (!userComplexId || existingBlockout.complexId.toString() !== userComplexId.toString()) {
-        return res.status(403).json({ message: 'No tienes permiso para eliminar este bloqueo' });
+    if (req.user.role === "admin") {
+      const userComplexId =
+        req.user.complexId ||
+        (await Complex.findOne({ owner: req.user._id }))?._id;
+      if (
+        !userComplexId ||
+        existingBlockout.complexId.toString() !== userComplexId.toString()
+      ) {
+        return res
+          .status(403)
+          .json({ message: "No tienes permiso para eliminar este bloqueo" });
       }
-    } else if (req.user.role !== 'superadmin') {
-      return res.status(403).json({ message: 'Rol no autorizado' });
+    } else if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Rol no autorizado" });
     }
 
     await Blockout.findByIdAndDelete(id);
-    res.json({ message: 'Bloqueo eliminado correctamente' });
+    res.json({ message: "Bloqueo eliminado correctamente" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-export {
-    getBlockouts,
-    createBlockout,
-    updateBlockout
-}
+export { getBlockouts, createBlockout, updateBlockout };

@@ -1,27 +1,27 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const tournamentSchema = new mongoose.Schema(
   {
     nombre: { type: String, required: true, trim: true, maxlength: 100 },
     descripcion: { type: String, trim: true, maxlength: 500 },
     fechaInicio: { type: String, required: true },
-    fechaFin:    { type: String, required: true },
+    fechaFin: { type: String, required: true },
     ubicacion: { type: String, required: true, trim: true, maxlength: 100 },
     cupoMaximo: { type: Number, required: true, min: 1, max: 9999 },
     categoria: {
       type: String,
-      enum: ['amateur', 'intermedio', 'avanzado', 'profesional', 'mixto'],
+      enum: ["amateur", "intermedio", "avanzado", "profesional", "mixto"],
       required: true,
     },
     estado: {
       type: String,
-      enum: ['activo', 'finalizado', 'cancelado'],
-      default: 'activo',
+      enum: ["activo", "finalizado", "cancelado"],
+      default: "activo",
     },
     whatsapp: { type: String, trim: true, maxlength: 20 },
-    complejo:  { type: mongoose.Schema.Types.ObjectId, ref: 'Complex' },
+    complejo: { type: mongoose.Schema.Types.ObjectId, ref: "Complex" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default mongoose.model('Torneo', tournamentSchema);
+export default mongoose.model("Torneo", tournamentSchema);
