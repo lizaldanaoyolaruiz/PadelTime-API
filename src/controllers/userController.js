@@ -1,5 +1,5 @@
-import User from '../models/User.js';
-import Booking from '../models/Booking.js';
+import User from "../models/User.js";
+import Booking from "../models/Booking.js";
 
 const getUsers = async (req, res, next) => {
   try {
@@ -17,21 +17,20 @@ const getUsers = async (req, res, next) => {
 
 const getUserFullProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id)
-      .populate('favoritos');
+    const user = await User.findById(req.params.id).populate("favoritos");
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
     const bookings = await Booking.find({ userId: req.params.id })
-      .populate('court')
-      .populate('complex')
+      .populate("court")
+      .populate("complex")
       .sort({ date: -1 });
-      console.log("BOOKINGS:", bookings);
+    console.log("BOOKINGS:", bookings);
     res.status(200).json({
       success: true,
       data: {
@@ -51,7 +50,7 @@ const getUserById = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
@@ -66,21 +65,14 @@ const getUserById = async (req, res, next) => {
 
 const createUser = async (req, res, next) => {
   try {
-    const {
-      name,
-      email,
-      password,
-      role,
-      status,
-      isVerified,
-    } = req.body;
+    const { name, email, password, role, status, isVerified } = req.body;
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'Email already registered',
+        message: "Email already registered",
       });
     }
 
@@ -104,13 +96,7 @@ const createUser = async (req, res, next) => {
 
 const updateUser = async (req, res, next) => {
   try {
-    const allowedFields = [
-      'name',
-      'email',
-      'role',
-      'status',
-      'isVerified',
-    ];
+    const allowedFields = ["name", "email", "role", "status", "isVerified"];
 
     const updateData = {};
 
@@ -120,19 +106,15 @@ const updateUser = async (req, res, next) => {
       }
     });
 
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    const user = await User.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
@@ -152,13 +134,13 @@ const deleteUser = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: "User not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'User deleted successfully',
+      message: "User deleted successfully",
     });
   } catch (error) {
     next(error);

@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const jugadorExternoSchema = new mongoose.Schema(
   {
@@ -7,21 +7,33 @@ const jugadorExternoSchema = new mongoose.Schema(
     email: { type: String },
     telefono: { type: String },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const bookingSchema = new mongoose.Schema(
   {
-    court: { type: mongoose.Schema.Types.ObjectId, ref: 'Court', required: true },
-    complex: { type: mongoose.Schema.Types.ObjectId, ref: 'Complex', required: true },
-    player: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    court: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Court",
+      required: true,
+    },
+    complex: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Complex",
+      required: true,
+    },
+    player: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     date: { type: String, required: true },
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'rejected', 'cancelled', 'completed'],
-      default: 'pending',
+      enum: ["pending", "confirmed", "rejected", "cancelled", "completed"],
+      default: "pending",
     },
     totalAmount: { type: Number, default: 0 },
     depositAmount: { type: Number, default: 0 },
@@ -29,13 +41,13 @@ const bookingSchema = new mongoose.Schema(
     preferenceId: { type: String },
     confirmationMethod: {
       type: String,
-      enum: ['mercadopago', 'whatsapp', 'manual'],
-      default: 'manual',
+      enum: ["mercadopago", "whatsapp", "manual"],
+      default: "manual",
     },
     jugadorExterno: { type: jugadorExternoSchema, default: null },
     observaciones: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default mongoose.model('Booking', bookingSchema);
+export default mongoose.model("Booking", bookingSchema);

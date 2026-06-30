@@ -1,59 +1,82 @@
-import Booking from '../models/Booking.js';
-import Complex from '../models/Complex.js';
-import Court from '../models/Court.js';
-import Blockout from '../models/Blockout.js';
-import MaintenanceSlot from '../models/MaintenanceSlot.js';
-import { createPreference, getPayment, searchPaymentsByReference } from '../services/mpService.js';
-import { sendBookingConfirmedByOwnerEmail, sendBookingRejectedEmail, sendBookingConfirmationEmail } from '../services/emailService.js';
-import { decrypt } from '../utils/encryption.js';
+import Booking from "../models/Booking.js";
+import Complex from "../models/Complex.js";
+import Court from "../models/Court.js";
+import Blockout from "../models/Blockout.js";
+import MaintenanceSlot from "../models/MaintenanceSlot.js";
+import {
+  createPreference,
+  getPayment,
+  searchPaymentsByReference,
+} from "../services/mpService.js";
+import {
+  sendBookingConfirmedByOwnerEmail,
+  sendBookingRejectedEmail,
+  sendBookingConfirmationEmail,
+} from "../services/emailService.js";
+import { decrypt } from "../utils/encryption.js";
 
-const padHour = (h) => String(h).padStart(2, '0') + ':00';
+const padHour = (h) => String(h).padStart(2, "0") + ":00";
 
 const sumarUnaHora = (hhmm) => {
-  const [h, m] = hhmm.split(':');
-  return String(parseInt(h) + 1).padStart(2, '0') + ':' + (m || '00');
+  const [h, m] = hhmm.split(":");
+  return String(parseInt(h) + 1).padStart(2, "0") + ":" + (m || "00");
 };
 
 const getDiaSemana = (fechaStr) => {
-  const dias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-  const d = new Date(fechaStr + 'T00:00:00Z');
+  const dias = [
+    "domingo",
+    "lunes",
+    "martes",
+    "miercoles",
+    "jueves",
+    "viernes",
+    "sabado",
+  ];
+  const d = new Date(fechaStr + "T00:00:00Z");
   return dias[d.getUTCDay()];
 };
 
 const DIA_A_SCHEDULE = {
-  lunes: 'monday', martes: 'tuesday', miercoles: 'wednesday',
-  jueves: 'thursday', viernes: 'friday', sabado: 'saturday', domingo: 'sunday',
+  lunes: "monday",
+  martes: "tuesday",
+  miercoles: "wednesday",
+  jueves: "thursday",
+  viernes: "friday",
+  sabado: "saturday",
+  domingo: "sunday",
 };
 
 const generarFechas = (from, to) => {
   const fechas = [];
-  const actual = new Date(from + 'T00:00:00Z');
-  const fin = new Date(to + 'T00:00:00Z');
+  const actual = new Date(from + "T00:00:00Z");
+  const fin = new Date(to + "T00:00:00Z");
   while (actual <= fin) {
-    fechas.push(actual.toISOString().split('T')[0]);
+    fechas.push(actual.toISOString().split("T")[0]);
     actual.setUTCDate(actual.getUTCDate() + 1);
   }
   return fechas;
 };
 
-const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(String(id ?? ''));
+const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(String(id ?? ""));
 
 export const getSlots = async (req, res) => {
   try {
     const { courtId, from, to } = req.query;
 
     if (!courtId || !from || !to) {
-      return res.status(400).json({ message: 'Se requieren courtId, from y to.' });
+      return res
+        .status(400)
+        .json({ message: "Se requieren courtId, from y to." });
     }
     if (!isValidObjectId(courtId)) {
-      return res.status(400).json({ message: 'courtId inválido.' });
+      return res.status(400).json({ message: "courtId inválido." });
     }
 
     const cancha = await Court.findById(courtId)
-      .populate('complex', 'openTime closeTime')
+      .populate("complex", "openTime closeTime")
       .lean();
     if (!cancha) {
-      return res.status(404).json({ message: 'Cancha no encontrada.' });
+      return res.status(404).json({ message: "Cancha no encontrada." });
     }
 
     const fechas = generarFechas(from, to);
@@ -62,9 +85,9 @@ export const getSlots = async (req, res) => {
       Booking.find({
         court: courtId,
         date: { $in: fechas },
-        status: { $in: ['pending', 'confirmed'] },
+        status: { $in: ["pending", "confirmed"] },
       })
-        .select('date startTime endTime status')
+        .select("date startTime endTime status")
         .lean(),
       Blockout.find({
         complexId: cancha.complex,
@@ -76,7 +99,7 @@ export const getSlots = async (req, res) => {
         date: { $in: fechas },
         isActive: true,
       })
-        .select('date startTime endTime')
+        .select("date startTime endTime")
         .lean(),
     ]);
 
@@ -89,61 +112,87 @@ export const getSlots = async (req, res) => {
 
       if (daySchedule?.enabled === false) continue;
 
-      const courtStart   = parseInt(daySchedule?.start?.split(':')[0] ?? 7);
-      const courtEnd     = parseInt(daySchedule?.end?.split(':')[0]   ?? 22);
-      const complexStart = cancha.complex?.openTime  ? parseInt(cancha.complex.openTime.split(':')[0])  : courtStart;
-      const complexEnd   = cancha.complex?.closeTime ? parseInt(cancha.complex.closeTime.split(':')[0]) : courtEnd;
-      const startHour    = Math.max(courtStart, complexStart);
-      const endHour      = Math.min(courtEnd,   complexEnd);
+      const courtStart = parseInt(daySchedule?.start?.split(":")[0] ?? 7);
+      const courtEnd = parseInt(daySchedule?.end?.split(":")[0] ?? 22);
+      const complexStart = cancha.complex?.openTime
+        ? parseInt(cancha.complex.openTime.split(":")[0])
+        : courtStart;
+      const complexEnd = cancha.complex?.closeTime
+        ? parseInt(cancha.complex.closeTime.split(":")[0])
+        : courtEnd;
+      const startHour = Math.max(courtStart, complexStart);
+      const endHour = Math.min(courtEnd, complexEnd);
 
       for (let hora = startHour; hora < endHour; hora++) {
         const horaStr = padHour(hora);
         const horaFinStr = padHour(hora + 1);
 
         const reservaEnSlot = reservas.find(
-          (r) => r.date === fecha && r.startTime < horaFinStr && r.endTime > horaStr
+          (r) =>
+            r.date === fecha && r.startTime < horaFinStr && r.endTime > horaStr,
         );
 
         let statusSlot;
         let blockoutInfo = null;
         if (reservaEnSlot) {
-          statusSlot = reservaEnSlot.status === 'confirmed' ? 'reservado' : 'pendiente';
+          statusSlot =
+            reservaEnSlot.status === "confirmed" ? "reservado" : "pendiente";
         } else {
           const matchedMaint = mantenimientos.find(
-            (m) => m.date === fecha && m.startTime < horaFinStr && m.endTime > horaStr
+            (m) =>
+              m.date === fecha &&
+              m.startTime < horaFinStr &&
+              m.endTime > horaStr,
           );
           if (matchedMaint) {
-            statusSlot = 'mantenimiento';
-            blockoutInfo = { name: 'Mantenimiento', start: matchedMaint.startTime, end: matchedMaint.endTime };
+            statusSlot = "mantenimiento";
+            blockoutInfo = {
+              name: "Mantenimiento",
+              start: matchedMaint.startTime,
+              end: matchedMaint.endTime,
+            };
           } else {
             const matchedBlockout = blockouts.find((b) => {
-              if (b.recurrence === 'once') return b.date === fecha && b.startTime < horaFinStr && b.endTime > horaStr;
-              if (b.recurrence === 'weekly' && b.dayOfWeek !== diaSemana) return false;
+              if (b.recurrence === "once")
+                return (
+                  b.date === fecha &&
+                  b.startTime < horaFinStr &&
+                  b.endTime > horaStr
+                );
+              if (b.recurrence === "weekly" && b.dayOfWeek !== diaSemana)
+                return false;
               return b.startTime < horaFinStr && b.endTime > horaStr;
             });
             if (matchedBlockout) {
-              statusSlot = 'mantenimiento';
-              blockoutInfo = { name: matchedBlockout.name, start: matchedBlockout.startTime, end: matchedBlockout.endTime };
+              statusSlot = "mantenimiento";
+              blockoutInfo = {
+                name: matchedBlockout.name,
+                start: matchedBlockout.startTime,
+                end: matchedBlockout.endTime,
+              };
             } else {
-              statusSlot = 'disponible';
+              statusSlot = "disponible";
             }
           }
         }
 
         const statusFinal =
-          req.query.vista === 'publica' && statusSlot === 'pendiente'
-            ? 'reservado'
+          req.query.vista === "publica" && statusSlot === "pendiente"
+            ? "reservado"
             : statusSlot;
 
         const slot = { courtId, date: fecha, hour: hora, status: statusFinal };
-        if (blockoutInfo && statusFinal === 'mantenimiento') slot.blockout = blockoutInfo;
+        if (blockoutInfo && statusFinal === "mantenimiento")
+          slot.blockout = blockoutInfo;
         slots.push(slot);
       }
     }
 
     return res.json(slots);
   } catch (error) {
-    return res.status(500).json({ message: 'Error al obtener los slots.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al obtener los slots.", error: error.message });
   }
 };
 
@@ -154,10 +203,12 @@ export const getBookings = async (req, res) => {
 
     const filtro = {};
 
-    if (usuario.role === 'player') {
+    if (usuario.role === "player") {
       filtro.player = usuario._id;
-    } else if (usuario.role === 'admin') {
-      const complejos = await Complex.find({ owner: usuario._id }).select('_id').lean();
+    } else if (usuario.role === "admin") {
+      const complejos = await Complex.find({ owner: usuario._id })
+        .select("_id")
+        .lean();
       filtro.complex = { $in: complejos.map((c) => c._id) };
     }
 
@@ -166,33 +217,44 @@ export const getBookings = async (req, res) => {
     if (courtId) filtro.court = courtId;
 
     const reservas = await Booking.find(filtro)
-      .populate('court', '_id name')
-      .populate('complex', '_id name image city whatsapp')
-      .populate('player', '_id name')
+      .populate("court", "_id name")
+      .populate("complex", "_id name image city whatsapp")
+      .populate("player", "_id name")
       .sort({ createdAt: -1 })
       .lean();
 
     return res.json({ bookings: reservas });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al obtener las reservas.', error: error.message });
+    return res
+      .status(500)
+      .json({
+        message: "Error al obtener las reservas.",
+        error: error.message,
+      });
   }
 };
 
 export const getBookingById = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id)
-      .populate('court', '_id name')
-      .populate('complex', '_id name')
-      .populate('player', '_id name')
+      .populate("court", "_id name")
+      .populate("complex", "_id name")
+      .populate("player", "_id name")
       .lean();
-    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
 
-    if (req.user.role === 'player' && reserva.player?._id?.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Acceso denegado.' });
+    if (
+      req.user.role === "player" &&
+      reserva.player?._id?.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Acceso denegado." });
     }
     return res.json({ booking: reserva });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al obtener la reserva.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al obtener la reserva.", error: error.message });
   }
 };
 
@@ -200,64 +262,93 @@ export const createBooking = async (req, res) => {
   try {
     const esFlujAdmin = !!req.body.canchaId;
 
-    if (esFlujAdmin && !['admin', 'superadmin'].includes(req.user.role)) {
-      return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
+    if (esFlujAdmin && !["admin", "superadmin"].includes(req.user.role)) {
+      return res
+        .status(403)
+        .json({
+          message: "Acceso denegado. Se requiere rol de administrador.",
+        });
     }
 
     const courtId = req.body.court || req.body.canchaId;
     const fecha = req.body.date || req.body.fecha;
     const horaInicio = req.body.startTime || req.body.horaInicio;
-    const horaFin = req.body.endTime || (horaInicio ? sumarUnaHora(horaInicio) : undefined);
-    const metodo = req.body.confirmationMethod || 'manual';
+    const horaFin =
+      req.body.endTime || (horaInicio ? sumarUnaHora(horaInicio) : undefined);
+    const metodo = req.body.confirmationMethod || "manual";
     const observaciones = req.body.observaciones;
 
     if (!courtId || !fecha || !horaInicio || !horaFin) {
-      return res.status(400).json({ message: 'Faltan campos requeridos: cancha, fecha y hora de inicio.' });
+      return res
+        .status(400)
+        .json({
+          message: "Faltan campos requeridos: cancha, fecha y hora de inicio.",
+        });
     }
 
     if (horaInicio >= horaFin) {
-      return res.status(400).json({ message: 'La hora de inicio debe ser anterior a la hora de fin.' });
+      return res
+        .status(400)
+        .json({
+          message: "La hora de inicio debe ser anterior a la hora de fin.",
+        });
     }
 
     const fechaHoraInicio = new Date(`${fecha}T${horaInicio}:00`);
     if (fechaHoraInicio <= new Date()) {
-      return res.status(400).json({ message: 'No se puede reservar en una fecha y hora pasada.' });
+      return res
+        .status(400)
+        .json({ message: "No se puede reservar en una fecha y hora pasada." });
     }
 
     const cancha = await Court.findById(courtId);
-    if (!cancha) return res.status(404).json({ message: 'La cancha no existe.' });
-    if (!cancha.enabled) return res.status(400).json({ message: 'La cancha no está disponible.' });
+    if (!cancha)
+      return res.status(404).json({ message: "La cancha no existe." });
+    if (!cancha.enabled)
+      return res.status(400).json({ message: "La cancha no está disponible." });
 
-    const complejo = await Complex.findById(cancha.complex).select('+mpAccessToken');
+    const complejo = await Complex.findById(cancha.complex).select(
+      "+mpAccessToken",
+    );
 
     if (complejo?.openTime && complejo?.closeTime) {
       if (horaInicio < complejo.openTime || horaFin > complejo.closeTime) {
         return res
           .status(400)
-          .json({ message: 'El horario está fuera del horario del complejo.' });
+          .json({ message: "El horario está fuera del horario del complejo." });
       }
     }
 
     let conflicto = await Booking.findOne({
       court: courtId,
       date: fecha,
-      status: { $nin: ['cancelled', 'rejected'] },
+      status: { $nin: ["cancelled", "rejected"] },
       startTime: { $lt: horaFin },
       endTime: { $gt: horaInicio },
     });
 
-    if (conflicto && conflicto.status === 'pending' && conflicto.confirmationMethod === 'mercadopago') {
-      const samePlayer = req.user && conflicto.player && conflicto.player.toString() === req.user._id.toString();
-      const minutosTranscurridos = (Date.now() - new Date(conflicto.createdAt).getTime()) / 60000;
+    if (
+      conflicto &&
+      conflicto.status === "pending" &&
+      conflicto.confirmationMethod === "mercadopago"
+    ) {
+      const samePlayer =
+        req.user &&
+        conflicto.player &&
+        conflicto.player.toString() === req.user._id.toString();
+      const minutosTranscurridos =
+        (Date.now() - new Date(conflicto.createdAt).getTime()) / 60000;
       if (samePlayer || minutosTranscurridos > 5) {
-        conflicto.status = 'cancelled';
+        conflicto.status = "cancelled";
         await conflicto.save();
         conflicto = null;
       }
     }
 
     if (conflicto) {
-      return res.status(409).json({ message: 'El horario ya está ocupado para esa cancha.' });
+      return res
+        .status(409)
+        .json({ message: "El horario ya está ocupado para esa cancha." });
     }
 
     const datosReserva = {
@@ -266,7 +357,7 @@ export const createBooking = async (req, res) => {
       date: fecha,
       startTime: horaInicio,
       endTime: horaFin,
-      status: 'pending',
+      status: "pending",
       confirmationMethod: metodo,
       observaciones,
     };
@@ -293,16 +384,16 @@ export const createBooking = async (req, res) => {
     const reserva = await Booking.create(datosReserva);
 
     await reserva.populate([
-      { path: 'court', select: '_id name' },
-      { path: 'complex', select: '_id whatsapp' },
-      { path: 'player', select: '_id name' },
+      { path: "court", select: "_id name" },
+      { path: "complex", select: "_id whatsapp" },
+      { path: "player", select: "_id name" },
     ]);
 
     if (esFlujAdmin) {
       return res.status(201).json({ booking: reserva });
     }
 
-    if (metodo === 'whatsapp') {
+    if (metodo === "whatsapp") {
       return res.status(201).json({
         booking: reserva,
         complex: { whatsapp: complejo?.whatsapp || null },
@@ -329,13 +420,19 @@ export const createBooking = async (req, res) => {
         payment: { initPoint: preferencia.init_point },
       });
     } catch (mpError) {
-      console.error('[MP] Error creando preferencia:', mpError.message);
-      reserva.status = 'cancelled';
+      console.error("[MP] Error creando preferencia:", mpError.message);
+      reserva.status = "cancelled";
       await reserva.save();
-      return res.status(500).json({ message: 'Error al conectar con Mercado Pago. Intentá nuevamente.' });
+      return res
+        .status(500)
+        .json({
+          message: "Error al conectar con Mercado Pago. Intentá nuevamente.",
+        });
     }
   } catch (error) {
-    return res.status(500).json({ message: 'Error al crear la reserva.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al crear la reserva.", error: error.message });
   }
 };
 
@@ -344,37 +441,40 @@ export const getBookingStats = async (req, res) => {
     const { from, to, courtId } = req.query;
 
     if (!from || !to) {
-      return res.status(400).json({ message: 'Se requieren from y to.' });
+      return res.status(400).json({ message: "Se requieren from y to." });
     }
     if (courtId && !isValidObjectId(courtId)) {
-      return res.status(400).json({ message: 'courtId inválido.' });
+      return res.status(400).json({ message: "courtId inválido." });
     }
 
     const fechas = generarFechas(from, to);
 
     const filtro = {
       date: { $in: fechas },
-      status: { $in: ['pending', 'confirmed'] },
+      status: { $in: ["pending", "confirmed"] },
     };
 
     if (courtId) {
       filtro.court = courtId;
-    } else if (req.user.role === 'admin') {
-      const complejos = await Complex.find({ owner: req.user._id }).select('_id').lean();
+    } else if (req.user.role === "admin") {
+      const complejos = await Complex.find({ owner: req.user._id })
+        .select("_id")
+        .lean();
       filtro.complex = { $in: complejos.map((c) => c._id) };
     }
 
     const reservas = await Booking.find(filtro).lean();
 
     const totalSlots = fechas.length * 16;
-    const occupancyRate = totalSlots > 0 ? Math.round((reservas.length / totalSlots) * 100) : 0;
+    const occupancyRate =
+      totalSlots > 0 ? Math.round((reservas.length / totalSlots) * 100) : 0;
 
     const estimatedRevenue = reservas
-      .filter((r) => r.status === 'confirmed')
+      .filter((r) => r.status === "confirmed")
       .reduce((sum, r) => sum + (r.totalAmount || 0), 0);
 
     const jugadoresUnicos = new Set(
-      reservas.filter((r) => r.player).map((r) => r.player.toString())
+      reservas.filter((r) => r.player).map((r) => r.player.toString()),
     ).size;
 
     return res.json({
@@ -384,41 +484,55 @@ export const getBookingStats = async (req, res) => {
       totalBookings: reservas.length,
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al obtener estadísticas.', error: error.message });
+    return res
+      .status(500)
+      .json({
+        message: "Error al obtener estadísticas.",
+        error: error.message,
+      });
   }
 };
 
 export const verificarPagoMP = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id)
-      .populate('complex', '+mpAccessToken name whatsapp location')
-      .populate('court', '_id name type')
-      .populate('player', '_id name email');
+      .populate("complex", "+mpAccessToken name whatsapp location")
+      .populate("court", "_id name type")
+      .populate("player", "_id name email");
 
-    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
-    if (reserva.confirmationMethod !== 'mercadopago') return res.status(400).json({ message: 'No es una reserva MP.' });
-    if (reserva.status === 'confirmed') return res.json({ booking: reserva });
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
+    if (reserva.confirmationMethod !== "mercadopago")
+      return res.status(400).json({ message: "No es una reserva MP." });
+    if (reserva.status === "confirmed") return res.json({ booking: reserva });
 
     const tokenDescifrado = decrypt(reserva.complex?.mpAccessToken);
     if (!tokenDescifrado) return res.json({ booking: reserva });
 
-    const resultado = await searchPaymentsByReference(tokenDescifrado, reserva._id.toString());
-    const pagoAprobado = resultado?.results?.find(p => p.status === 'approved');
+    const resultado = await searchPaymentsByReference(
+      tokenDescifrado,
+      reserva._id.toString(),
+    );
+    const pagoAprobado = resultado?.results?.find(
+      (p) => p.status === "approved",
+    );
 
     if (pagoAprobado) {
       reserva.paymentId = String(pagoAprobado.id);
-      reserva.status = 'confirmed';
+      reserva.status = "confirmed";
       await reserva.save();
-      sendBookingConfirmationEmail(reserva).catch(err =>
-        console.error('[Email] Error enviando confirmación:', err.message)
+      sendBookingConfirmationEmail(reserva).catch((err) =>
+        console.error("[Email] Error enviando confirmación:", err.message),
       );
-      console.log('[VerifyMP] Booking confirmed via MP search:', reserva._id);
+      console.log("[VerifyMP] Booking confirmed via MP search:", reserva._id);
     }
 
     return res.json({ booking: reserva });
   } catch (error) {
-    console.error('[VerifyMP] Error:', error.message);
-    return res.status(500).json({ message: 'Error al verificar el pago.', error: error.message });
+    console.error("[VerifyMP] Error:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Error al verificar el pago.", error: error.message });
   }
 };
 
@@ -426,12 +540,19 @@ export const limpiarReservasMPPendientes = async (req, res) => {
   try {
     const { all } = req.body || {};
     const filtro = all
-      ? { status: { $in: ['pending', 'confirmed'] } }
-      : { status: { $in: ['pending', 'confirmed'] }, confirmationMethod: 'mercadopago' };
-    const result = await Booking.updateMany(filtro, { $set: { status: 'cancelled' } });
+      ? { status: { $in: ["pending", "confirmed"] } }
+      : {
+          status: { $in: ["pending", "confirmed"] },
+          confirmationMethod: "mercadopago",
+        };
+    const result = await Booking.updateMany(filtro, {
+      $set: { status: "cancelled" },
+    });
     return res.json({ canceladas: result.modifiedCount });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al limpiar reservas.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al limpiar reservas.", error: error.message });
   }
 };
 
@@ -440,227 +561,288 @@ export const confirmarPago = async (req, res) => {
     const { paymentId, collectionStatus } = req.body;
 
     const reserva = await Booking.findById(req.params.id);
-    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
 
-    if (reserva.confirmationMethod !== 'mercadopago') {
-      return res.status(400).json({ message: 'Esta reserva no es de MercadoPago.' });
+    if (reserva.confirmationMethod !== "mercadopago") {
+      return res
+        .status(400)
+        .json({ message: "Esta reserva no es de MercadoPago." });
     }
 
-    if (reserva.status === 'confirmed') {
+    if (reserva.status === "confirmed") {
       return res.json({ booking: reserva });
     }
 
-    if (['pending', 'in_process'].includes(collectionStatus)) {
+    if (["pending", "in_process"].includes(collectionStatus)) {
       return res.json({ booking: reserva, pending: true });
     }
 
-    if (['rejected', 'cancelled', 'null'].includes(collectionStatus)) {
-      if (reserva.status === 'pending') {
-        reserva.status = 'cancelled';
+    if (["rejected", "cancelled", "null"].includes(collectionStatus)) {
+      if (reserva.status === "pending") {
+        reserva.status = "cancelled";
         await reserva.save();
       }
-      return res.status(400).json({ message: 'El pago no fue aprobado. Podés intentarlo nuevamente.' });
+      return res
+        .status(400)
+        .json({
+          message: "El pago no fue aprobado. Podés intentarlo nuevamente.",
+        });
     }
 
     if (paymentId) reserva.paymentId = paymentId;
-    reserva.status = 'confirmed';
+    reserva.status = "confirmed";
     await reserva.save();
 
     await reserva.populate([
-      { path: 'court',    select: '_id name type' },
-      { path: 'complex',  select: '_id name whatsapp location' },
-      { path: 'player',   select: '_id name email' },
+      { path: "court", select: "_id name type" },
+      { path: "complex", select: "_id name whatsapp location" },
+      { path: "player", select: "_id name email" },
     ]);
 
     sendBookingConfirmationEmail(reserva).catch((err) =>
-      console.error('[Email] Error enviando confirmación de pago:', err.message)
+      console.error(
+        "[Email] Error enviando confirmación de pago:",
+        err.message,
+      ),
     );
 
-    console.log('[PaymentSuccess] Booking confirmed:', reserva._id);
+    console.log("[PaymentSuccess] Booking confirmed:", reserva._id);
     return res.json({ booking: reserva });
   } catch (error) {
-    console.error('[PaymentSuccess] Error:', error.message);
-    return res.status(500).json({ message: 'Error al confirmar el pago.', error: error.message });
+    console.error("[PaymentSuccess] Error:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Error al confirmar el pago.", error: error.message });
   }
 };
 
 export const confirmarReserva = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id);
-    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
 
-    if (req.user.role === 'admin') {
-      const complejo = await Complex.findOne({ _id: reserva.complex, owner: req.user._id });
-      if (!complejo) return res.status(403).json({ message: 'Acceso denegado.' });
+    if (req.user.role === "admin") {
+      const complejo = await Complex.findOne({
+        _id: reserva.complex,
+        owner: req.user._id,
+      });
+      if (!complejo)
+        return res.status(403).json({ message: "Acceso denegado." });
     }
 
-    reserva.status = 'confirmed';
+    reserva.status = "confirmed";
     await reserva.save();
 
     await reserva.populate([
-      { path: 'court', select: '_id name' },
-      { path: 'complex', select: '_id name whatsapp' },
-      { path: 'player', select: '_id name email' },
+      { path: "court", select: "_id name" },
+      { path: "complex", select: "_id name whatsapp" },
+      { path: "player", select: "_id name email" },
     ]);
 
     sendBookingConfirmedByOwnerEmail(reserva).catch((err) =>
-      console.error('[Email] Error enviando confirmación:', err.message)
+      console.error("[Email] Error enviando confirmación:", err.message),
     );
 
     return res.json({ booking: reserva });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al confirmar la reserva.', error: error.message });
+    return res
+      .status(500)
+      .json({
+        message: "Error al confirmar la reserva.",
+        error: error.message,
+      });
   }
 };
 
 export const rechazarReserva = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id);
-    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
 
-    if (req.user.role === 'admin') {
-      const complejo = await Complex.findOne({ _id: reserva.complex, owner: req.user._id });
-      if (!complejo) return res.status(403).json({ message: 'Acceso denegado.' });
+    if (req.user.role === "admin") {
+      const complejo = await Complex.findOne({
+        _id: reserva.complex,
+        owner: req.user._id,
+      });
+      if (!complejo)
+        return res.status(403).json({ message: "Acceso denegado." });
     }
 
-    const motivo = req.body.reason || '';
-    reserva.status = 'rejected';
+    const motivo = req.body.reason || "";
+    reserva.status = "rejected";
     if (motivo) reserva.observaciones = motivo;
     await reserva.save();
 
     await reserva.populate([
-      { path: 'court', select: '_id name' },
-      { path: 'complex', select: '_id name whatsapp' },
-      { path: 'player', select: '_id name email' },
+      { path: "court", select: "_id name" },
+      { path: "complex", select: "_id name whatsapp" },
+      { path: "player", select: "_id name email" },
     ]);
 
     sendBookingRejectedEmail(reserva, motivo).catch((err) =>
-      console.error('[Email] Error enviando rechazo:', err.message)
+      console.error("[Email] Error enviando rechazo:", err.message),
     );
 
     return res.json({ booking: reserva });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al rechazar la reserva.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al rechazar la reserva.", error: error.message });
   }
 };
 
 export const cancelarReserva = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id);
-    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
 
-    const esAdmin = ['admin', 'superadmin'].includes(req.user.role);
+    const esAdmin = ["admin", "superadmin"].includes(req.user.role);
     const esJugadorDueno =
-      req.user.role === 'player' && reserva.player && reserva.player.equals(req.user._id);
+      req.user.role === "player" &&
+      reserva.player &&
+      reserva.player.equals(req.user._id);
 
     if (!esAdmin && !esJugadorDueno) {
-      return res.status(403).json({ message: 'Acceso denegado.' });
+      return res.status(403).json({ message: "Acceso denegado." });
     }
 
-    if (esAdmin && req.user.role === 'admin') {
-      const complejo = await Complex.findOne({ _id: reserva.complex, owner: req.user._id });
-      if (!complejo) return res.status(403).json({ message: 'Acceso denegado.' });
+    if (esAdmin && req.user.role === "admin") {
+      const complejo = await Complex.findOne({
+        _id: reserva.complex,
+        owner: req.user._id,
+      });
+      if (!complejo)
+        return res.status(403).json({ message: "Acceso denegado." });
     }
 
-    if (reserva.status === 'cancelled') {
-      return res.status(400).json({ message: 'La reserva ya está cancelada.' });
+    if (reserva.status === "cancelled") {
+      return res.status(400).json({ message: "La reserva ya está cancelada." });
     }
 
-    reserva.status = 'cancelled';
+    reserva.status = "cancelled";
     await reserva.save();
 
     await reserva.populate([
-      { path: 'court', select: '_id name' },
-      { path: 'complex', select: '_id whatsapp' },
-      { path: 'player', select: '_id name' },
+      { path: "court", select: "_id name" },
+      { path: "complex", select: "_id whatsapp" },
+      { path: "player", select: "_id name" },
     ]);
 
     return res.json({ booking: reserva });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al cancelar la reserva.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al cancelar la reserva.", error: error.message });
   }
 };
 
 export const editarReserva = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id);
-    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
 
     const esJugadorDueno =
-      req.user.role === 'player' && reserva.player && reserva.player.equals(req.user._id);
-    const esAdmin = ['admin', 'superadmin'].includes(req.user.role);
+      req.user.role === "player" &&
+      reserva.player &&
+      reserva.player.equals(req.user._id);
+    const esAdmin = ["admin", "superadmin"].includes(req.user.role);
 
     if (!esJugadorDueno && !esAdmin) {
-      return res.status(403).json({ message: 'Acceso denegado.' });
+      return res.status(403).json({ message: "Acceso denegado." });
     }
 
-    if (!['pending', 'confirmed'].includes(reserva.status)) {
-      return res.status(400).json({ message: 'Solo se pueden editar reservas pendientes o confirmadas.' });
+    if (!["pending", "confirmed"].includes(reserva.status)) {
+      return res
+        .status(400)
+        .json({
+          message: "Solo se pueden editar reservas pendientes o confirmadas.",
+        });
     }
 
     const { date, startTime, endTime } = req.body;
 
     if (!date || !startTime || !endTime) {
-      return res.status(400).json({ message: 'Se requieren fecha, hora de inicio y hora de fin.' });
+      return res
+        .status(400)
+        .json({ message: "Se requieren fecha, hora de inicio y hora de fin." });
     }
 
     if (startTime >= endTime) {
-      return res.status(400).json({ message: 'La hora de inicio debe ser anterior a la hora de fin.' });
+      return res
+        .status(400)
+        .json({
+          message: "La hora de inicio debe ser anterior a la hora de fin.",
+        });
     }
 
     const fechaHoraInicio = new Date(`${date}T${startTime}:00`);
     if (fechaHoraInicio <= new Date()) {
-      return res.status(400).json({ message: 'No se puede reservar en una fecha pasada.' });
+      return res
+        .status(400)
+        .json({ message: "No se puede reservar en una fecha pasada." });
     }
 
     const conflicto = await Booking.findOne({
       _id: { $ne: reserva._id },
       court: reserva.court,
       date,
-      status: { $in: ['pending', 'confirmed'] },
+      status: { $in: ["pending", "confirmed"] },
       startTime: { $lt: endTime },
       endTime: { $gt: startTime },
     });
 
     if (conflicto) {
-      return res.status(409).json({ message: 'El horario elegido ya está ocupado.' });
+      return res
+        .status(409)
+        .json({ message: "El horario elegido ya está ocupado." });
     }
 
-    reserva.date      = date;
+    reserva.date = date;
     reserva.startTime = startTime;
-    reserva.endTime   = endTime;
-    reserva.status    = 'pending';
+    reserva.endTime = endTime;
+    reserva.status = "pending";
     await reserva.save();
 
     await reserva.populate([
-      { path: 'court',    select: '_id name' },
-      { path: 'complex',  select: '_id name image city' },
-      { path: 'player',   select: '_id name' },
+      { path: "court", select: "_id name" },
+      { path: "complex", select: "_id name image city" },
+      { path: "player", select: "_id name" },
     ]);
 
     return res.json({ booking: reserva });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al editar la reserva.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al editar la reserva.", error: error.message });
   }
 };
 
 export const eliminarReserva = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id);
-    if (!reserva) return res.status(404).json({ message: 'Reserva no encontrada.' });
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
 
     const esJugadorDueno =
-      req.user.role === 'player' && reserva.player && reserva.player.equals(req.user._id);
-    const esAdmin = ['admin', 'superadmin'].includes(req.user.role);
+      req.user.role === "player" &&
+      reserva.player &&
+      reserva.player.equals(req.user._id);
+    const esAdmin = ["admin", "superadmin"].includes(req.user.role);
 
     if (!esJugadorDueno && !esAdmin) {
-      return res.status(403).json({ message: 'Acceso denegado.' });
+      return res.status(403).json({ message: "Acceso denegado." });
     }
 
     await reserva.deleteOne();
-    return res.json({ message: 'Reserva eliminada correctamente.' });
+    return res.json({ message: "Reserva eliminada correctamente." });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al eliminar la reserva.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al eliminar la reserva.", error: error.message });
   }
 };
-
