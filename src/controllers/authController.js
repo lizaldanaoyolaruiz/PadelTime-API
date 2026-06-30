@@ -42,9 +42,11 @@ export const register = async (req, res) => {
       userData.status = 'approved';
 
       const user = await User.create(userData);
-      sendVerificationEmail(user, token).catch((err) =>
-        console.error('[email] Verification error:', err.message)
-      );
+      try {
+        await sendVerificationEmail(user, token);
+      } catch (err) {
+        console.error('[email] Verification error:', err.message);
+      }
 
       return res.status(201).json({
         message: 'Account created. Please verify your email before logging in.',
@@ -60,6 +62,27 @@ export const register = async (req, res) => {
     res.status(201).json({ message: 'Admin account created.', token, user: formatUser(user) });
   } catch (error) {
     res.status(500).json({ message: 'Error registering user.', error: error.message });
+  }
+};
+
+export const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required.' });
+
+    const user = await User.findOne({ email }).select('+verificationToken');
+    if (!user) return res.status(404).json({ message: 'No account found with that email.' });
+    if (user.isVerified) return res.status(400).json({ message: 'This account is already verified.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    user.verificationToken = token;
+    await user.save();
+
+    await sendVerificationEmail(user, token);
+
+    res.json({ message: 'Verification email resent. Please check your inbox.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error resending verification email.', error: error.message });
   }
 };
 

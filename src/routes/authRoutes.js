@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, verifyEmail, login, getMe, updateMe, deleteMe, uploadAvatar } from '../controllers/authController.js';
+import { register, resendVerification, verifyEmail, login, getMe, updateMe, deleteMe, uploadAvatar } from '../controllers/authController.js';
 import { uploadSingle } from '../middlewares/uploadMiddleware.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import validate from '../middlewares/validateMiddleware.js';
@@ -9,6 +9,7 @@ import { registerRules, loginRules } from '../middlewares/authValidationMiddlewa
 const router = Router();
 
 router.post('/register', resolveRegisterName, registerRules, validate, register);
+router.post('/resend-verification', resendVerification);
 router.get('/verify-email', verifyEmail);
 router.post('/login', loginRules, validate, login);
 router.get('/me', protect, getMe);
