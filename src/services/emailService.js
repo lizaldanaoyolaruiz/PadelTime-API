@@ -15,6 +15,16 @@ const transporter = nodemailer.createTransport({
 
 const from = `"PadelTime" <${process.env.SMTP_USER}>`;
 
+export const verifyEmailConnection = async () => {
+  try {
+    await transporter.verify();
+    console.log('[email] SMTP listo ✓');
+  } catch (err) {
+    console.error('[email] ERROR de conexión SMTP:', err.message);
+    console.error('[email] Revisá SMTP_HOST, SMTP_PORT, SMTP_USER y SMTP_PASS en el .env');
+  }
+};
+
 export const sendVerificationEmail = async (user, token) => {
   const link = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
   await transporter.sendMail({
