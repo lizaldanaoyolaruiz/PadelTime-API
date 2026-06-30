@@ -42,9 +42,11 @@ export const register = async (req, res) => {
       userData.status = 'approved';
 
       const user = await User.create(userData);
-      sendVerificationEmail(user, token).catch((err) =>
-        console.error('[email] Verification error:', err.message)
-      );
+      try {
+        await sendVerificationEmail(user, token);
+      } catch (err) {
+        console.error('[email] Verification error:', err.message);
+      }
 
       return res.status(201).json({
         message: 'Account created. Please verify your email before logging in.',
