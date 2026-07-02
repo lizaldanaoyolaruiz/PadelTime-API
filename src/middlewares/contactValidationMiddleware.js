@@ -21,6 +21,6 @@ export const contactRules = [
     .trim()
     .notEmpty()
     .withMessage("El mensaje es obligatorio.")
-    .isLength({ min: 10, max: 2200 })
-    .withMessage("El mensaje debe tener entre 10 y 2200 caracteres."),
+    .isLength({ min: 10, max: 350 })
+    .withMessage("El mensaje debe tener entre 10 y 350 caracteres."),
 ];

@@ -107,7 +107,7 @@ async function buscarAlternativas({
   complex,
 }) {
   const alternativas = [];
-  const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+  const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
   const whatsappNum = cleanWhatsappNumber(complex.whatsapp);
   const fechaFormateada = new Date(`${date}T12:00:00`).toLocaleDateString(
     "es-AR",
@@ -327,7 +327,7 @@ async function executeVerificarDisponibilidad({
       });
     }
 
-    const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+    const FRONTEND_URL = process.env.CLIENT_URL || "http://localhost:5173";
     const whatsappNum = cleanWhatsappNumber(complex.whatsapp);
     const fechaFormateada = new Date(`${date}T12:00:00`).toLocaleDateString(
       "es-AR",
