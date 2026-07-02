@@ -41,7 +41,7 @@ const processPaymentNotification = async (bookingId, paymentId) => {
 
     if (booking.player?.email) {
       await sendBookingConfirmationEmail(booking).catch((err) =>
-        console.error("[Webhook] Confirmation email failed:", err.message),
+        console.error("[Webhook] Error al enviar el email de confirmación:", err.message),
       );
     }
   } else if (payment.status === "rejected") {
@@ -59,6 +59,6 @@ export const handleWebhook = async (req, res) => {
 
     await processPaymentNotification(req.params.bookingId, data.id.toString());
   } catch (error) {
-    console.error("[Webhook] Processing error:", error.message);
+    console.error("[Webhook] Error de procesamiento:", error.message);
   }
 };
