@@ -34,7 +34,9 @@ export const register = async (req, res) => {
 
     const exists = await User.findOne({ email });
     if (exists)
-      return res.status(400).json({ message: "Email already registered." });
+      return res
+        .status(400)
+        .json({ message: "El email ya está registrado." });
 
     const assignedRole = role === "admin" ? "admin" : "player";
     const userData = { name, email, password, role: assignedRole };
@@ -49,11 +51,12 @@ export const register = async (req, res) => {
       try {
         await sendVerificationEmail(user, token);
       } catch (err) {
-        console.error("[email] Verification error:", err.message);
+        console.error("[email] Error de verificación:", err.message);
       }
 
       return res.status(201).json({
-        message: "Account created. Please verify your email before logging in.",
+        message:
+          "Cuenta creada. Verificá tu email antes de iniciar sesión.",
       });
     }
 
@@ -66,31 +69,32 @@ export const register = async (req, res) => {
     res
       .status(201)
       .json({
-        message: "Admin account created.",
+        message: "Cuenta de administrador creada.",
         token,
         user: formatUser(user),
       });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error registering user.", error: error.message });
+      .json({ message: "Error al registrar el usuario.", error: error.message });
   }
 };
 
 export const resendVerification = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ message: "Email is required." });
+    if (!email)
+      return res.status(400).json({ message: "El email es requerido." });
 
     const user = await User.findOne({ email }).select("+verificationToken");
     if (!user)
       return res
         .status(404)
-        .json({ message: "No account found with that email." });
+        .json({ message: "No se encontró una cuenta con ese email." });
     if (user.isVerified)
       return res
         .status(400)
-        .json({ message: "This account is already verified." });
+        .json({ message: "Esta cuenta ya está verificada." });
 
     const token = crypto.randomBytes(32).toString("hex");
     user.verificationToken = token;
@@ -99,13 +103,13 @@ export const resendVerification = async (req, res) => {
     await sendVerificationEmail(user, token);
 
     res.json({
-      message: "Verification email resent. Please check your inbox.",
+      message: "Email de verificación reenviado. Revisá tu bandeja de entrada.",
     });
   } catch (error) {
     res
       .status(500)
       .json({
-        message: "Error resending verification email.",
+        message: "Error al reenviar el email de verificación.",
         error: error.message,
       });
   }
@@ -114,23 +118,24 @@ export const resendVerification = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
-    if (!token) return res.status(400).json({ message: "Token is required." });
+    if (!token)
+      return res.status(400).json({ message: "El token es requerido." });
 
     const user = await User.findOne({ verificationToken: token }).select(
       "+verificationToken",
     );
     if (!user)
-      return res.status(400).json({ message: "Invalid or expired token." });
+      return res.status(400).json({ message: "Token inválido o expirado." });
 
     user.isVerified = true;
     user.verificationToken = undefined;
     await user.save();
 
-    res.json({ message: "Email verified successfully. You can now log in." });
+    res.json({ message: "Email verificado correctamente. Ya podés iniciar sesión." });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error verifying email.", error: error.message });
+      .json({ message: "Error al verificar el email.", error: error.message });
   }
 };
 
@@ -140,13 +145,13 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ email }).select("+password");
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ message: "Invalid credentials." });
+      return res.status(401).json({ message: "Credenciales inválidas." });
     }
 
     if (user.role === "player" && !user.isVerified) {
       return res
         .status(403)
-        .json({ message: "Please verify your email before logging in." });
+        .json({ message: "Verificá tu email antes de iniciar sesión." });
     }
 
     const token = generateToken(user);
@@ -154,7 +159,7 @@ export const login = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error logging in.", error: error.message });
+      .json({ message: "Error al iniciar sesión.", error: error.message });
   }
 };
 
