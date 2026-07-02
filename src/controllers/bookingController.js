@@ -363,6 +363,12 @@ export const createBooking = async (req, res) => {
     };
 
     if (esFlujAdmin) {
+      if (!/^\+?[0-9]{13}$/.test(req.body.jugadorTelefono || "")) {
+        return res.status(400).json({
+          message:
+            "Teléfono inválido (13 dígitos, sin espacios, ej: +5493813550986).",
+        });
+      }
       datosReserva.jugadorExterno = {
         nombre: req.body.jugadorNombre,
         apellido: req.body.jugadorApellido,
