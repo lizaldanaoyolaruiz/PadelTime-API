@@ -1,12 +1,16 @@
 import { body } from "express-validator";
 
+const NAME_RE = /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s'-]+$/;
+
 export const courtRules = [
   body("name")
     .trim()
     .notEmpty()
     .withMessage("El nombre es requerido.")
     .isLength({ min: 3, max: 50 })
-    .withMessage("El nombre debe tener entre 3 y 50 caracteres."),
+    .withMessage("El nombre debe tener entre 3 y 50 caracteres.")
+    .matches(NAME_RE)
+    .withMessage("El nombre solo puede contener letras, números y espacios."),
   body("type")
     .isIn(["crystal", "panoramic"])
     .withMessage("El tipo debe ser crystal o panoramic."),
@@ -29,7 +33,9 @@ export const courtUpdateRules = [
     .notEmpty()
     .withMessage("El nombre no puede estar vacío.")
     .isLength({ min: 3, max: 50 })
-    .withMessage("El nombre debe tener entre 3 y 50 caracteres."),
+    .withMessage("El nombre debe tener entre 3 y 50 caracteres.")
+    .matches(NAME_RE)
+    .withMessage("El nombre solo puede contener letras, números y espacios."),
   body("type")
     .optional()
     .isIn(["crystal", "panoramic"])
