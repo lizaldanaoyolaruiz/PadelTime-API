@@ -6,6 +6,8 @@ import {
 } from "../controllers/maintenanceController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { requireRole } from "../middlewares/roleMiddleware.js";
+import validate from "../middlewares/validateMiddleware.js";
+import { maintenanceRules } from "../middlewares/maintenanceValidationMiddleware.js";
 
 const router = Router();
 
@@ -14,6 +16,8 @@ router.post(
   "/",
   protect,
   requireRole("admin", "superadmin"),
+  maintenanceRules,
+  validate,
   crearMantenimiento,
 );
 router.delete(

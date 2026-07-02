@@ -26,7 +26,7 @@ export const getAdminUsers = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error fetching users.", error: error.message });
+      .json({ message: "Error al obtener los usuarios.", error: error.message });
   }
 };
 
@@ -190,21 +190,23 @@ export const approveAdmin = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user || user.role !== "admin") {
-      return res.status(404).json({ message: "Admin user not found." });
+      return res
+        .status(404)
+        .json({ message: "Usuario administrador no encontrado." });
     }
 
     user.status = "approved";
     await user.save();
 
     sendApprovalEmail(user).catch((err) =>
-      console.error("[email] Approval error:", err.message),
+      console.error("[email] Error de aprobación:", err.message),
     );
 
-    res.json({ message: "Admin approved successfully.", user });
+    res.json({ message: "Administrador aprobado correctamente.", user });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error approving admin.", error: error.message });
+      .json({ message: "Error al aprobar el administrador.", error: error.message });
   }
 };
 
@@ -214,20 +216,22 @@ export const rejectAdmin = async (req, res) => {
 
     const user = await User.findById(req.params.id);
     if (!user || user.role !== "admin") {
-      return res.status(404).json({ message: "Admin user not found." });
+      return res
+        .status(404)
+        .json({ message: "Usuario administrador no encontrado." });
     }
 
     user.status = "rejected";
     await user.save();
 
     sendRejectionEmail(user, reason).catch((err) =>
-      console.error("[email] Rejection error:", err.message),
+      console.error("[email] Error de rechazo:", err.message),
     );
 
-    res.json({ message: "Admin rejected.", user });
+    res.json({ message: "Administrador rechazado.", user });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error rejecting admin.", error: error.message });
+      .json({ message: "Error al rechazar el administrador.", error: error.message });
   }
 };

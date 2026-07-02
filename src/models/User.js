@@ -5,22 +5,30 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Name is required"],
+      required: [true, "El nombre es requerido"],
       trim: true,
-      minlength: 3,
-      maxlength: 50,
+      minlength: [3, "El nombre debe tener al menos 3 caracteres"],
+      maxlength: [101, "El nombre no puede tener más de 101 caracteres"],
+      match: [
+        /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ'-]+(?: [a-zA-ZáéíóúÁÉÍÓÚüÜñÑ'-]+)*$/,
+        "El nombre solo puede contener letras",
+      ],
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: [true, "El email es requerido"],
       unique: true,
       lowercase: true,
       trim: true,
+      minlength: [6, "El email debe tener al menos 6 caracteres"],
+      maxlength: [100, "El email no puede tener más de 100 caracteres"],
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, "Email inválido"],
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
-      minlength: [8, "Password must be at least 8 characters"],
+      required: [true, "La contraseña es requerida"],
+      minlength: [8, "La contraseña debe tener al menos 8 caracteres"],
+      maxlength: [64, "La contraseña no puede tener más de 64 caracteres"],
       select: false,
     },
     role: {
@@ -41,6 +49,7 @@ const userSchema = new mongoose.Schema(
     location: {
       type: String,
       trim: true,
+      maxlength: [100, "La ubicación no puede tener más de 100 caracteres"],
       default: "",
     },
     avatar: {

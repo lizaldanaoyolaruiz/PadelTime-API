@@ -22,7 +22,7 @@ const getUserFullProfile = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "Usuario no encontrado",
       });
     }
 
@@ -50,7 +50,7 @@ const getUserById = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "Usuario no encontrado",
       });
     }
 
@@ -72,7 +72,7 @@ const createUser = async (req, res, next) => {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: "Email already registered",
+        message: "El email ya está registrado",
       });
     }
 
@@ -114,7 +114,7 @@ const updateUser = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "Usuario no encontrado",
       });
     }
 
@@ -134,13 +134,13 @@ const deleteUser = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "Usuario no encontrado",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "User deleted successfully",
+      message: "Usuario eliminado correctamente",
     });
   } catch (error) {
     next(error);
