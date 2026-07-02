@@ -16,6 +16,11 @@ import {
 } from "../controllers/bookingController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { requireRole } from "../middlewares/roleMiddleware.js";
+import validate from "../middlewares/validateMiddleware.js";
+import {
+  createBookingRules,
+  editBookingRules,
+} from "../middlewares/bookingValidationMiddleware.js";
 
 const router = Router();
 
@@ -29,7 +34,7 @@ router.get(
 
 router.get("/", protect, getBookings);
 router.get("/:id", protect, getBookingById);
-router.post("/", protect, createBooking);
+router.post("/", protect, createBookingRules, validate, createBooking);
 
 router.post(
   "/admin/cleanup-mp",
@@ -52,7 +57,7 @@ router.patch(
   rechazarReserva,
 );
 router.patch("/:id/cancel", protect, cancelarReserva);
-router.patch("/:id", protect, editarReserva);
+router.patch("/:id", protect, editBookingRules, validate, editarReserva);
 router.delete("/:id", protect, eliminarReserva);
 
 export default router;
