@@ -28,15 +28,15 @@ export const createReview = async (req, res) => {
     if (!complexId || !rating) {
       return res
         .status(400)
-        .json({ message: "complexId and rating are required." });
+        .json({ message: "Se requieren complexId y rating." });
     }
     if (!mongoose.Types.ObjectId.isValid(complexId)) {
-      return res.status(404).json({ message: "Complex not found." });
+      return res.status(404).json({ message: "Complejo no encontrado." });
     }
     if (rating < 1 || rating > 5) {
       return res
         .status(400)
-        .json({ message: "Rating must be between 1 and 5." });
+        .json({ message: "La calificación debe estar entre 1 y 5." });
     }
 
     const booking = await Booking.findOne({
@@ -87,7 +87,7 @@ export const createReview = async (req, res) => {
     }
     res
       .status(500)
-      .json({ message: "Error creating review.", error: error.message });
+      .json({ message: "Error al crear la valoración.", error: error.message });
   }
 };
 
@@ -96,7 +96,7 @@ export const getComplexReviews = async (req, res) => {
     const { complexId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(complexId)) {
-      return res.status(404).json({ message: "Complex not found." });
+      return res.status(404).json({ message: "Complejo no encontrado." });
     }
 
     const [reviews, complex] = await Promise.all([
@@ -107,7 +107,7 @@ export const getComplexReviews = async (req, res) => {
     ]);
 
     if (!complex)
-      return res.status(404).json({ message: "Complex not found." });
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
     res.json({
       average: complex.ratingAverage,
@@ -117,7 +117,7 @@ export const getComplexReviews = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error fetching reviews.", error: error.message });
+      .json({ message: "Error al obtener las valoraciones.", error: error.message });
   }
 };
 
@@ -126,7 +126,7 @@ export const canReview = async (req, res) => {
     const { complexId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(complexId)) {
-      return res.status(404).json({ message: "Complex not found." });
+      return res.status(404).json({ message: "Complejo no encontrado." });
     }
 
     const [booking, existingReview] = await Promise.all([
@@ -146,7 +146,7 @@ export const canReview = async (req, res) => {
     res
       .status(500)
       .json({
-        message: "Error checking review eligibility.",
+        message: "Error al verificar si podés valorar.",
         error: error.message,
       });
   }
@@ -156,7 +156,7 @@ export const getOwnerReviews = async (req, res) => {
   try {
     const complex = await Complex.findOne({ owner: req.user._id });
     if (!complex)
-      return res.status(404).json({ message: "No complex registered." });
+      return res.status(404).json({ message: "No tenés un complejo registrado." });
 
     const reviews = await Review.find({ complex: complex._id })
       .populate("user", "name")
@@ -170,18 +170,19 @@ export const getOwnerReviews = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error fetching reviews.", error: error.message });
+      .json({ message: "Error al obtener las valoraciones.", error: error.message });
   }
 };
 
 export const updateReview = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).json({ message: "Review not found." });
+      return res.status(404).json({ message: "Valoración no encontrada." });
     }
 
     const review = await Review.findById(req.params.id);
-    if (!review) return res.status(404).json({ message: "Review not found." });
+    if (!review)
+      return res.status(404).json({ message: "Valoración no encontrada." });
 
     if (String(review.user) !== String(req.user._id)) {
       return res
@@ -195,7 +196,7 @@ export const updateReview = async (req, res) => {
       if (rating < 1 || rating > 5) {
         return res
           .status(400)
-          .json({ message: "Rating must be between 1 and 5." });
+          .json({ message: "La calificación debe estar entre 1 y 5." });
       }
       review.rating = rating;
     }
@@ -209,18 +210,19 @@ export const updateReview = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error updating review.", error: error.message });
+      .json({ message: "Error al actualizar la valoración.", error: error.message });
   }
 };
 
 export const deleteReview = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).json({ message: "Review not found." });
+      return res.status(404).json({ message: "Valoración no encontrada." });
     }
 
     const review = await Review.findById(req.params.id);
-    if (!review) return res.status(404).json({ message: "Review not found." });
+    if (!review)
+      return res.status(404).json({ message: "Valoración no encontrada." });
 
     const isOwnerOfReview = String(review.user) === String(req.user._id);
     if (!isOwnerOfReview && req.user.role !== "superadmin") {
@@ -237,6 +239,6 @@ export const deleteReview = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error deleting review.", error: error.message });
+      .json({ message: "Error al eliminar la valoración.", error: error.message });
   }
 };

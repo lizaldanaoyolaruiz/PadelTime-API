@@ -79,7 +79,7 @@ export const createPreference = async (
 
   if (response.status !== 201 && response.status !== 200) {
     throw new Error(
-      `MP preference creation failed (${response.status}): ${JSON.stringify(response.body)}`,
+      `Error al crear la preferencia de MP (${response.status}): ${JSON.stringify(response.body)}`,
     );
   }
 
@@ -97,7 +97,7 @@ export const searchPaymentsByReference = async (
   );
   if (response.status !== 200)
     throw new Error(
-      `MP search failed (${response.status}): ${JSON.stringify(response.body)}`,
+      `Error en la búsqueda de MP (${response.status}): ${JSON.stringify(response.body)}`,
     );
   return response.body;
 };
@@ -110,7 +110,7 @@ export const getPayment = async (accessToken, paymentId) => {
   );
 
   if (response.status !== 200) {
-    throw new Error(`MP payment not found (${response.status}): ${paymentId}`);
+    throw new Error(`Pago de MP no encontrado (${response.status}): ${paymentId}`);
   }
 
   return response.body;

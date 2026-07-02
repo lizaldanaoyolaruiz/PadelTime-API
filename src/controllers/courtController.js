@@ -44,7 +44,7 @@ export const createCourt = async (req, res) => {
     if (!complex)
       return res
         .status(403)
-        .json({ message: "Not authorized to add courts to this complex." });
+        .json({ message: "No autorizado para agregar canchas a este complejo." });
 
     let photo;
     if (req.file) {
@@ -81,14 +81,14 @@ export const getCourtsByComplex = async (req, res) => {
   try {
     const { complexId } = req.query;
     if (!complexId)
-      return res.status(400).json({ message: "complexId is required." });
+      return res.status(400).json({ message: "Se requiere complexId." });
 
     const complex = await getComplexIfOwner(
       complexId,
       req.user._id,
       req.user.role,
     );
-    if (!complex) return res.status(403).json({ message: "Not authorized." });
+    if (!complex) return res.status(403).json({ message: "No autorizado." });
 
     const courts = await Court.find({ complex: complexId }).sort({
       createdAt: 1,
@@ -97,14 +97,14 @@ export const getCourtsByComplex = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error fetching courts.", error: error.message });
+      .json({ message: "Error al obtener las canchas.", error: error.message });
   }
 };
 
 export const updateCourt = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
-    if (!court) return res.status(404).json({ message: "Court not found." });
+    if (!court) return res.status(404).json({ message: "Cancha no encontrada." });
 
     const complex = await getComplexIfOwner(
       court.complex,
@@ -114,7 +114,7 @@ export const updateCourt = async (req, res) => {
     if (!complex)
       return res
         .status(403)
-        .json({ message: "Not authorized to edit this court." });
+        .json({ message: "No autorizado para editar esta cancha." });
 
     const fields = [
       "name",
@@ -142,14 +142,14 @@ export const updateCourt = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error updating court.", error: error.message });
+      .json({ message: "Error al actualizar la cancha.", error: error.message });
   }
 };
 
 export const deleteCourt = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
-    if (!court) return res.status(404).json({ message: "Court not found." });
+    if (!court) return res.status(404).json({ message: "Cancha no encontrada." });
 
     const complex = await getComplexIfOwner(
       court.complex,
@@ -159,14 +159,14 @@ export const deleteCourt = async (req, res) => {
     if (!complex)
       return res
         .status(403)
-        .json({ message: "Not authorized to delete this court." });
+        .json({ message: "No autorizado para eliminar esta cancha." });
 
     await court.deleteOne();
-    res.json({ message: "Court deleted successfully." });
+    res.json({ message: "Cancha eliminada correctamente." });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error deleting court.", error: error.message });
+      .json({ message: "Error al eliminar la cancha.", error: error.message });
   }
 };
 
@@ -174,7 +174,7 @@ export const getPublicCourts = async (req, res) => {
   try {
     const { complexId } = req.query;
     if (!complexId)
-      return res.status(400).json({ message: "complexId is required." });
+      return res.status(400).json({ message: "Se requiere complexId." });
 
     const courts = await Court.find({ complex: complexId, enabled: true }).sort(
       { createdAt: 1 },
@@ -183,7 +183,7 @@ export const getPublicCourts = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error fetching courts.", error: error.message });
+      .json({ message: "Error al obtener las canchas.", error: error.message });
   }
 };
 
@@ -194,29 +194,29 @@ export const getPublicCourtById = async (req, res) => {
       "price name",
     );
     if (!court || !court.enabled)
-      return res.status(404).json({ message: "Court not found." });
+      return res.status(404).json({ message: "Cancha no encontrada." });
     res.json({ court });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error fetching court.", error: error.message });
+      .json({ message: "Error al obtener la cancha.", error: error.message });
   }
 };
 
 export const uploadCourtPhotos = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
-    if (!court) return res.status(404).json({ message: "Court not found." });
+    if (!court) return res.status(404).json({ message: "Cancha no encontrada." });
 
     const complex = await getComplexIfOwner(
       court.complex,
       req.user._id,
       req.user.role,
     );
-    if (!complex) return res.status(403).json({ message: "Not authorized." });
+    if (!complex) return res.status(403).json({ message: "No autorizado." });
 
     if (!req.files?.length)
-      return res.status(400).json({ message: "No files provided." });
+      return res.status(400).json({ message: "No se proporcionaron archivos." });
 
     const uploaded = await Promise.all(
       req.files.map((f) =>
@@ -233,21 +233,21 @@ export const uploadCourtPhotos = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error uploading court photos.", error: error.message });
+      .json({ message: "Error al subir las fotos de la cancha.", error: error.message });
   }
 };
 
 export const deleteCourtPhoto = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
-    if (!court) return res.status(404).json({ message: "Court not found." });
+    if (!court) return res.status(404).json({ message: "Cancha no encontrada." });
 
     const complex = await getComplexIfOwner(
       court.complex,
       req.user._id,
       req.user.role,
     );
-    if (!complex) return res.status(403).json({ message: "Not authorized." });
+    if (!complex) return res.status(403).json({ message: "No autorizado." });
 
     const { url } = req.body;
     court.photos = (court.photos || []).filter((u) => u !== url);
@@ -258,25 +258,25 @@ export const deleteCourtPhoto = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error deleting court photo.", error: error.message });
+      .json({ message: "Error al eliminar la foto de la cancha.", error: error.message });
   }
 };
 
 export const setCourtPrincipalPhoto = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
-    if (!court) return res.status(404).json({ message: "Court not found." });
+    if (!court) return res.status(404).json({ message: "Cancha no encontrada." });
 
     const complex = await getComplexIfOwner(
       court.complex,
       req.user._id,
       req.user.role,
     );
-    if (!complex) return res.status(403).json({ message: "Not authorized." });
+    if (!complex) return res.status(403).json({ message: "No autorizado." });
 
     const { url } = req.body;
     if (!(court.photos || []).includes(url))
-      return res.status(400).json({ message: "Photo not found in court." });
+      return res.status(400).json({ message: "La foto no pertenece a esta cancha." });
 
     court.photo = url;
     await court.save();
@@ -286,7 +286,7 @@ export const setCourtPrincipalPhoto = async (req, res) => {
     res
       .status(500)
       .json({
-        message: "Error setting principal photo.",
+        message: "Error al establecer la foto principal.",
         error: error.message,
       });
   }

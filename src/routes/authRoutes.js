@@ -16,6 +16,7 @@ import resolveRegisterName from "../middlewares/resolveNameMiddleware.js";
 import {
   registerRules,
   loginRules,
+  updateMeRules,
 } from "../middlewares/authValidationMiddleware.js";
 
 const router = Router();
@@ -31,7 +32,7 @@ router.post("/resend-verification", resendVerification);
 router.get("/verify-email", verifyEmail);
 router.post("/login", loginRules, validate, login);
 router.get("/me", protect, getMe);
-router.put("/me", protect, updateMe);
+router.put("/me", protect, updateMeRules, validate, updateMe);
 router.delete("/me", protect, deleteMe);
 router.post("/me/avatar", protect, uploadSingle, uploadAvatar);
 
