@@ -1,18 +1,49 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const complexSchema = new mongoose.Schema(
   {
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    name: { type: String, required: true, trim: true },
-    location: { type: String, trim: true },
-    city: { type: String, trim: true, enum: ['San Miguel de Tucumán', 'Yerba Buena', 'Tafí Viejo'] },
-    description: { type: String, trim: true },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 100,
+      match: /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s'\-&.]+$/,
+    },
+    location: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+      match: /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s.,'-]+$/,
+    },
+    city: {
+      type: String,
+      required: true,
+      trim: true,
+      enum: ["San Miguel de Tucumán", "Yerba Buena", "Tafí Viejo"],
+    },
+    province: {
+      type: String,
+      trim: true,
+      minlength: 3,
+      maxlength: 50,
+      match: /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s'\-.]+$/,
+      default: "Tucumán",
+    },
+    phone: { type: String, trim: true, match: /^\+?[0-9]{13}$/ },
+    courts: { type: Number, min: 1, max: 50 },
+    description: { type: String, trim: true, minlength: 3, maxlength: 500 },
     image: { type: String },
     photos: { type: [String], default: [] },
-    price: { type: Number },
-    openTime: { type: String },
-    closeTime: { type: String },
-    whatsapp: { type: String, trim: true },
+    price: { type: Number, min: 0.01, max: 999999 },
+    openTime: { type: String, match: /^([01]\d|2[0-3]):[0-5]\d$/ },
+    closeTime: { type: String, match: /^([01]\d|2[0-3]):[0-5]\d$/ },
+    whatsapp: { type: String, trim: true, match: /^\+?[0-9]{13}$/ },
     instagram: { type: String, trim: true },
     mercadopagoPublicKey: { type: String, select: false },
 
@@ -24,13 +55,13 @@ const complexSchema = new mongoose.Schema(
     isFeatured: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'suspended'],
-      default: 'pending',
+      enum: ["pending", "approved", "rejected", "suspended"],
+      default: "pending",
     },
-    rejectReason: { type: String },
-    observations: { type: String, trim: true },
+    rejectReason: { type: String, maxlength: 300 },
+    observations: { type: String, trim: true, maxlength: 300 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default mongoose.model('Complex', complexSchema);
+export default mongoose.model("Complex", complexSchema);

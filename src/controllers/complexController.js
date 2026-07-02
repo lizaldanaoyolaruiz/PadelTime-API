@@ -1,19 +1,25 @@
-import { Readable } from 'stream';
-import mongoose from 'mongoose';
-import { encrypt, decrypt } from '../utils/encryption.js';
-import cloudinary from '../config/cloudinary.js';
-import Complex from '../models/Complex.js';
-import Court from '../models/Court.js';
-import User from '../models/User.js';
-import ActivityLog from '../models/ActivityLog.js';
-import { sendApprovalEmail, sendRejectionEmail } from '../services/emailService.js';
+import { Readable } from "stream";
+import mongoose from "mongoose";
+import { encrypt, decrypt } from "../utils/encryption.js";
+import cloudinary from "../config/cloudinary.js";
+import Complex from "../models/Complex.js";
+import Court from "../models/Court.js";
+import User from "../models/User.js";
+import ActivityLog from "../models/ActivityLog.js";
+import {
+  sendApprovalEmail,
+  sendRejectionEmail,
+} from "../services/emailService.js";
 
 const uploadImage = (buffer, folder) =>
   new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream({ folder }, (error, result) => {
-      if (error) return reject(error);
-      resolve(result);
-    });
+    const stream = cloudinary.uploader.upload_stream(
+      { folder },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      },
+    );
     Readable.from(buffer).pipe(stream);
   });
 
@@ -22,11 +28,11 @@ const isOwner = (complex, userId) =>
 
 export const getFeaturedComplexes = async (req, res) => {
   try {
-    const filter = { status: 'approved' };
-    if (req.query.isFeatured === 'true') filter.isFeatured = true;
+    const filter = { status: "approved" };
+    if (req.query.isFeatured === "true") filter.isFeatured = true;
 
     const complexes = await Complex.find(filter)
-      .select('name location price ratingAverage image openTime closeTime')
+      .select("name location price ratingAverage image openTime closeTime")
       .sort({ ratingAverage: -1 })
       .limit(6);
 
@@ -42,23 +48,27 @@ export const getFeaturedComplexes = async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching complexes.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al obtener los complejos.", error: error.message });
   }
 };
 
 export const getPublicComplexes = async (req, res) => {
   try {
-    const complejos = await Complex.find({ status: 'approved' })
-      .select('name location city price ratingAverage ratingCount photos image description openTime closeTime')
+    const complejos = await Complex.find({ status: "approved" })
+      .select(
+        "name location city price ratingAverage ratingCount photos image description openTime closeTime",
+      )
       .lean();
 
     if (complejos.length === 0) {
       return res.json({ complexes: [] });
     }
 
-    const ids = complejos.map(c => c._id);
+    const ids = complejos.map((c) => c._id);
     const canchas = await Court.find({ complex: { $in: ids }, enabled: true })
-      .select('complex type features pricePerHour schedule')
+      .select("complex type features pricePerHour schedule")
       .lean();
 
     const canchasPorComplejo = {};
@@ -68,7 +78,7 @@ export const getPublicComplexes = async (req, res) => {
       canchasPorComplejo[id].push(cancha);
     }
 
-    const tipoEnEspanol = { crystal: 'Cristal', panoramic: 'Panorámica' };
+    const tipoEnEspanol = { crystal: "Cristal", panoramic: "Panorámica" };
 
     const getFranjasDeCancha = (cancha) => {
       const franjas = [];
@@ -76,28 +86,34 @@ export const getPublicComplexes = async (req, res) => {
 
       for (const dia of dias) {
         if (!dia?.enabled) continue;
-        const inicio = parseInt(dia.start?.split(':')[0] || '0', 10);
-        const fin = parseInt(dia.end?.split(':')[0] || '0', 10);
+        const inicio = parseInt(dia.start?.split(":")[0] || "0", 10);
+        const fin = parseInt(dia.end?.split(":")[0] || "0", 10);
 
-        if (inicio < 12 && fin > 6 && !franjas.includes('Mañana')) franjas.push('Mañana');
-        if (inicio < 18 && fin > 12 && !franjas.includes('Tarde')) franjas.push('Tarde');
-        if (inicio < 24 && fin > 18 && !franjas.includes('Noche')) franjas.push('Noche');
-        if (inicio < 6 && !franjas.includes('Madrugada')) franjas.push('Madrugada');
+        if (inicio < 12 && fin > 6 && !franjas.includes("Mañana"))
+          franjas.push("Mañana");
+        if (inicio < 18 && fin > 12 && !franjas.includes("Tarde"))
+          franjas.push("Tarde");
+        if (inicio < 24 && fin > 18 && !franjas.includes("Noche"))
+          franjas.push("Noche");
+        if (inicio < 6 && !franjas.includes("Madrugada"))
+          franjas.push("Madrugada");
       }
       return franjas;
     };
 
-    const resultado = complejos.map(complejo => {
-      const canchasDelComplejo = canchasPorComplejo[complejo._id.toString()] || [];
+    const resultado = complejos.map((complejo) => {
+      const canchasDelComplejo =
+        canchasPorComplejo[complejo._id.toString()] || [];
 
       const precios = canchasDelComplejo
-        .filter(c => c.pricePerHour > 0)
-        .map(c => c.pricePerHour);
-      const precioPorHora = complejo.price || (precios.length > 0 ? Math.min(...precios) : 0);
+        .filter((c) => c.pricePerHour > 0)
+        .map((c) => c.pricePerHour);
+      const precioPorHora =
+        complejo.price || (precios.length > 0 ? Math.min(...precios) : 0);
 
       const features = [];
       for (const cancha of canchasDelComplejo) {
-        for (const feature of (cancha.features || [])) {
+        for (const feature of cancha.features || []) {
           if (!features.includes(feature)) features.push(feature);
         }
       }
@@ -120,7 +136,12 @@ export const getPublicComplexes = async (req, res) => {
 
     res.json({ complexes: resultado });
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener los complejos.', error: error.message });
+    res
+      .status(500)
+      .json({
+        message: "Error al obtener los complejos.",
+        error: error.message,
+      });
   }
 };
 
@@ -129,61 +150,96 @@ export const getPublicComplexById = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(404).json({ message: 'Complex not found.' });
+      return res.status(404).json({ message: "Complejo no encontrado." });
     }
 
-    const complex = await Complex.findOne({ _id: id, status: 'approved' });
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    const complex = await Complex.findOne({ _id: id, status: "approved" });
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
     res.json({ complex });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching complex.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al obtener el complejo.", error: error.message });
   }
 };
 
 export const createComplex = async (req, res) => {
   try {
     const exists = await Complex.findOne({ owner: req.user._id });
-    if (exists) return res.status(400).json({ message: 'Ya tenés un complejo registrado.' });
+    if (exists)
+      return res
+        .status(400)
+        .json({ message: "Ya tenés un complejo registrado." });
 
-    const { name, address, city, description, whatsapp, instagram, depositPercentage, price, openTime, closeTime } = req.body;
+    const {
+      name,
+      address,
+      city,
+      description,
+      whatsapp,
+      instagram,
+      depositPercentage,
+      price,
+      openTime,
+      closeTime,
+    } = req.body;
 
     const complex = await Complex.create({
       owner: req.user._id,
-      name, location: address, city, description, whatsapp, instagram,
-      depositPercentage, price, openTime, closeTime,
-      status: 'pending',
+      name,
+      location: address,
+      city,
+      description,
+      whatsapp,
+      instagram,
+      depositPercentage,
+      price,
+      openTime,
+      closeTime,
+      status: "pending",
     });
 
     res.status(201).json({ complex });
   } catch (error) {
-    if (error.name === 'ValidationError') {
+    if (error.name === "ValidationError") {
       return res.status(400).json({ message: error.message });
     }
-    res.status(500).json({ message: 'Error al crear el complejo.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al crear el complejo.", error: error.message });
   }
 };
 
-const CIUDADES_VALIDAS = ['San Miguel de Tucumán', 'Tafí Viejo', 'Yerba Buena'];
+const CIUDADES_VALIDAS = ["San Miguel de Tucumán", "Tafí Viejo", "Yerba Buena"];
 
 export const getCities = async (req, res) => {
   try {
-    const rawCities = await Complex.distinct('city', { status: 'approved' });
-    const ciudades = CIUDADES_VALIDAS.filter(ciudadValida =>
-      rawCities.some(c => c?.trim().toLowerCase() === ciudadValida.toLowerCase())
+    const rawCities = await Complex.distinct("city", { status: "approved" });
+    const ciudades = CIUDADES_VALIDAS.filter((ciudadValida) =>
+      rawCities.some(
+        (c) => c?.trim().toLowerCase() === ciudadValida.toLowerCase(),
+      ),
     );
     return res.json({ ciudades });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al obtener ciudades.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al obtener ciudades.", error: error.message });
   }
 };
 
 export const getMyComplexes = async (req, res) => {
   try {
-    const complexes = await Complex.find({ owner: req.user._id }).select('_id name city status').lean();
+    const complexes = await Complex.find({ owner: req.user._id })
+      .select("_id name city status")
+      .lean();
     res.json({ complexes });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching complexes.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al obtener los complejos.", error: error.message });
   }
 };
 
@@ -193,57 +249,87 @@ export const getMyComplex = async (req, res) => {
       ? { _id: req.query.complexId, owner: req.user._id }
       : { owner: req.user._id };
 
-    const complex = await Complex.findOne(filtro).select('+mercadopagoPublicKey +mpAccessToken');
-    if (!complex) return res.status(404).json({ message: 'No complex registered.' });
+    const complex = await Complex.findOne(filtro).select(
+      "+mercadopagoPublicKey +mpAccessToken",
+    );
+    if (!complex)
+      return res.status(404).json({ message: "No tenés un complejo registrado." });
 
     const data = complex.toObject();
     if (data.mercadopagoPublicKey) {
-      data.mercadopagoPublicKey = '••••••••' + data.mercadopagoPublicKey.slice(-4);
+      data.mercadopagoPublicKey =
+        "••••••••" + data.mercadopagoPublicKey.slice(-4);
     }
     data.mpTokenConfigured = !!data.mpAccessToken;
     delete data.mpAccessToken;
 
     res.json({ complex: data });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching complex.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al obtener el complejo.", error: error.message });
   }
 };
 
 export const deleteMpToken = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
-    if (!complex) return res.status(404).json({ message: 'Complejo no encontrado.' });
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
-    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
-      return res.status(403).json({ message: 'No autorizado.' });
+    if (!isOwner(complex, req.user._id) && req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "No autorizado." });
     }
 
-    complex.mpAccessToken      = undefined;
+    complex.mpAccessToken = undefined;
     complex.mercadopagoPublicKey = undefined;
-    complex.mercadopagoActive  = false;
+    complex.mercadopagoActive = false;
     await complex.save();
 
-    return res.json({ message: 'Token de Mercado Pago eliminado correctamente.', mercadopagoActive: false });
+    return res.json({
+      message: "Token de Mercado Pago eliminado correctamente.",
+      mercadopagoActive: false,
+    });
   } catch (error) {
-    return res.status(500).json({ message: 'Error al eliminar el token.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Error al eliminar el token.", error: error.message });
   }
 };
 
 export const updateComplex = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
-    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
-      return res.status(403).json({ message: 'Not authorized to edit this complex.' });
+    if (!isOwner(complex, req.user._id) && req.user.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "No autorizado para editar este complejo." });
     }
 
     const fields = [
-      'name', 'city', 'description', 'whatsapp', 'instagram',
-      'depositPercentage', 'mercadopagoPublicKey', 'mercadopagoActive',
-      'price', 'openTime', 'closeTime', 'image',
+      "name",
+      "city",
+      "description",
+      "whatsapp",
+      "instagram",
+      "depositPercentage",
+      "mercadopagoPublicKey",
+      "mercadopagoActive",
+      "price",
+      "openTime",
+      "closeTime",
+      "image",
+      "phone",
+      "province",
+      "courts",
+      "observations",
     ];
-    fields.forEach((f) => { if (req.body[f] !== undefined) complex[f] = req.body[f]; });
+    fields.forEach((f) => {
+      if (req.body[f] !== undefined) complex[f] = req.body[f];
+    });
     if (req.body.address !== undefined) complex.location = req.body.address;
 
     if (req.body.mpAccessToken?.trim()) {
@@ -251,61 +337,128 @@ export const updateComplex = async (req, res) => {
       complex.mercadopagoActive = true;
     }
 
+    if (
+      req.user.role === "superadmin" &&
+      (req.body.owner !== undefined || req.body.email !== undefined)
+    ) {
+      const ownerUser = await User.findById(complex.owner);
+      if (ownerUser) {
+        if (req.body.owner?.trim() && req.body.owner.trim() !== ownerUser.name) {
+          ownerUser.name = req.body.owner.trim();
+        }
+        const newEmail = req.body.email?.toLowerCase().trim();
+        if (newEmail && newEmail !== ownerUser.email) {
+          const emailTaken = await User.findOne({
+            email: newEmail,
+            _id: { $ne: ownerUser._id },
+          });
+          if (emailTaken) {
+            return res
+              .status(400)
+              .json({ message: "Ese email ya está en uso por otro usuario." });
+          }
+          ownerUser.email = newEmail;
+        }
+        await ownerUser.save();
+      }
+    }
+
     await complex.save();
-    const data = complex.toObject();
+    const updated = await Complex.findById(complex._id).populate(
+      "owner",
+      "name email",
+    );
+    const data = updated.toObject();
     delete data.mercadopagoPublicKey;
     delete data.mpAccessToken;
 
     res.json({ complex: data });
   } catch (error) {
-    res.status(500).json({ message: 'Error updating complex.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al actualizar el complejo.", error: error.message });
   }
 };
 
 export const createComplexByAdmin = async (req, res) => {
   try {
-    const { name, ownerEmail, city, address, observations } = req.body;
+    const {
+      name,
+      owner,
+      ownerEmail,
+      phone,
+      courts,
+      city,
+      address,
+      province,
+      observations,
+    } = req.body;
 
-    const ownerUser = await User.findOne({ email: ownerEmail.toLowerCase().trim() });
+    const ownerUser = await User.findOne({
+      email: ownerEmail.toLowerCase().trim(),
+    });
     if (!ownerUser) {
-      return res.status(404).json({ message: 'No se encontró un usuario con ese email.' });
+      return res
+        .status(404)
+        .json({ message: "No se encontró un usuario con ese email." });
     }
-    if (ownerUser.role !== 'admin') {
-      return res.status(400).json({ message: 'El usuario debe tener rol de propietario (admin).' });
+    if (ownerUser.role !== "admin") {
+      return res
+        .status(400)
+        .json({ message: "El usuario debe tener rol de propietario (admin)." });
     }
 
     const exists = await Complex.findOne({ owner: ownerUser._id });
     if (exists) {
-      return res.status(400).json({ message: 'Este propietario ya tiene un complejo registrado.' });
+      return res
+        .status(400)
+        .json({ message: "Este propietario ya tiene un complejo registrado." });
+    }
+
+    if (owner?.trim() && owner.trim() !== ownerUser.name) {
+      ownerUser.name = owner.trim();
+      await ownerUser.save();
     }
 
     const complex = await Complex.create({
       owner: ownerUser._id,
-      name, city, location: address, observations,
-      status: 'approved',
+      name,
+      city,
+      location: address,
+      phone,
+      courts,
+      province,
+      observations,
+      status: "approved",
     });
 
-    res.status(201).json({ complex });
+    const populated = await complex.populate("owner", "name email");
+    res.status(201).json({ complex: populated });
   } catch (error) {
-    res.status(500).json({ message: 'Error al crear el complejo.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al crear el complejo.", error: error.message });
   }
 };
 
 export const uploadPhotos = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
-    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
-      return res.status(403).json({ message: 'Not authorized.' });
+    if (!isOwner(complex, req.user._id) && req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "No autorizado." });
     }
 
     if (!req.files || !req.files.length) {
-      return res.status(400).json({ message: 'No images provided.' });
+      return res.status(400).json({ message: "No se proporcionaron imágenes." });
     }
 
     const results = await Promise.all(
-      req.files.map((f) => uploadImage(f.buffer, `padeltime/complexes/${complex._id}`))
+      req.files.map((f) =>
+        uploadImage(f.buffer, `padeltime/complexes/${complex._id}`),
+      ),
     );
 
     complex.photos.push(...results.map((r) => r.secure_url));
@@ -314,22 +467,27 @@ export const uploadPhotos = async (req, res) => {
 
     res.json({ photos: complex.photos });
   } catch (error) {
-    res.status(500).json({ message: 'Error uploading photos.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al subir las fotos.", error: error.message });
   }
 };
 
 export const setPrincipalPhoto = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
-    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
-      return res.status(403).json({ message: 'Not authorized.' });
+    if (!isOwner(complex, req.user._id) && req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "No autorizado." });
     }
 
     const { url } = req.body;
     if (!complex.photos.includes(url)) {
-      return res.status(400).json({ message: 'La foto no pertenece a este complejo.' });
+      return res
+        .status(400)
+        .json({ message: "La foto no pertenece a este complejo." });
     }
 
     complex.image = url;
@@ -337,17 +495,23 @@ export const setPrincipalPhoto = async (req, res) => {
 
     res.json({ image: complex.image });
   } catch (error) {
-    res.status(500).json({ message: 'Error al establecer foto principal.', error: error.message });
+    res
+      .status(500)
+      .json({
+        message: "Error al establecer foto principal.",
+        error: error.message,
+      });
   }
 };
 
 export const deletePhoto = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
-    if (!isOwner(complex, req.user._id) && req.user.role !== 'superadmin') {
-      return res.status(403).json({ message: 'Not authorized.' });
+    if (!isOwner(complex, req.user._id) && req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "No autorizado." });
     }
 
     const { url } = req.body;
@@ -355,13 +519,15 @@ export const deletePhoto = async (req, res) => {
     if (complex.image === url) complex.image = complex.photos[0] || null;
     await complex.save();
 
-    const segments = url.split('/');
-    const publicId = `padeltime/complexes/${complex._id}/${segments[segments.length - 1].split('.')[0]}`;
+    const segments = url.split("/");
+    const publicId = `padeltime/complexes/${complex._id}/${segments[segments.length - 1].split(".")[0]}`;
     await cloudinary.uploader.destroy(publicId);
 
     res.json({ photos: complex.photos });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting photo.', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error al eliminar la foto.", error: error.message });
   }
 };
 
@@ -369,40 +535,50 @@ export const getAdminComplexes = async (req, res) => {
   try {
     const { status, search } = req.query;
     const filter = {};
-    if (status && status !== 'all') filter.status = status;
+    if (status && status !== "all") filter.status = status;
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { city: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: "i" } },
+        { city: { $regex: search, $options: "i" } },
       ];
     }
 
-    const [complexes, total, pending, approved, rejected, suspended] = await Promise.all([
-      Complex.find(filter).populate('owner', 'name email').sort({ createdAt: -1 }),
-      Complex.countDocuments(),
-      Complex.countDocuments({ status: 'pending' }),
-      Complex.countDocuments({ status: 'approved' }),
-      Complex.countDocuments({ status: 'rejected' }),
-      Complex.countDocuments({ status: 'suspended' }),
-    ]);
+    const [complexes, total, pending, approved, rejected, suspended] =
+      await Promise.all([
+        Complex.find(filter)
+          .populate("owner", "name email")
+          .sort({ createdAt: -1 }),
+        Complex.countDocuments(),
+        Complex.countDocuments({ status: "pending" }),
+        Complex.countDocuments({ status: "approved" }),
+        Complex.countDocuments({ status: "rejected" }),
+        Complex.countDocuments({ status: "suspended" }),
+      ]);
 
-    res.json({ data: complexes, stats: { total, pending, approved, rejected, suspended } });
+    res.json({
+      data: complexes,
+      stats: { total, pending, approved, rejected, suspended },
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({ message: "Error interno del servidor." });
   }
 };
 
 export const approveComplex = async (req, res) => {
   try {
-    const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    const complex = await Complex.findById(req.params.id).populate(
+      "owner",
+      "name email",
+    );
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
-    complex.status = 'approved';
+    complex.status = "approved";
     complex.rejectReason = undefined;
     await complex.save();
 
     await ActivityLog.create({
-      action: 'approved',
+      action: "approved",
       complexId: complex._id,
       complexName: complex.name,
       adminId: req.user._id,
@@ -410,27 +586,31 @@ export const approveComplex = async (req, res) => {
     });
 
     sendApprovalEmail(complex.owner).catch((err) =>
-      console.error('[email] Approval error:', err.message)
+      console.error("[email] Error de aprobación:", err.message),
     );
 
-    res.json({ message: 'Complex approved.', complex });
+    res.json({ message: "Complejo aprobado.", complex });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({ message: "Error interno del servidor." });
   }
 };
 
 export const rejectComplex = async (req, res) => {
   try {
     const { reason } = req.body;
-    const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    const complex = await Complex.findById(req.params.id).populate(
+      "owner",
+      "name email",
+    );
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
-    complex.status = 'rejected';
+    complex.status = "rejected";
     complex.rejectReason = reason;
     await complex.save();
 
     await ActivityLog.create({
-      action: 'rejected',
+      action: "rejected",
       complexId: complex._id,
       complexName: complex.name,
       adminId: req.user._id,
@@ -439,27 +619,31 @@ export const rejectComplex = async (req, res) => {
     });
 
     sendRejectionEmail(complex.owner, reason).catch((err) =>
-      console.error('[email] Rejection error:', err.message)
+      console.error("[email] Error de rechazo:", err.message),
     );
 
-    res.json({ message: 'Complex rejected.', complex });
+    res.json({ message: "Complejo rechazado.", complex });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({ message: "Error interno del servidor." });
   }
 };
 
 export const suspendComplex = async (req, res) => {
   try {
     const { reason } = req.body;
-    const complex = await Complex.findById(req.params.id).populate('owner', 'name email');
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    const complex = await Complex.findById(req.params.id).populate(
+      "owner",
+      "name email",
+    );
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
-    complex.status = 'suspended';
+    complex.status = "suspended";
     complex.rejectReason = reason;
     await complex.save();
 
     await ActivityLog.create({
-      action: 'suspended',
+      action: "suspended",
       complexId: complex._id,
       complexName: complex.name,
       adminId: req.user._id,
@@ -467,33 +651,35 @@ export const suspendComplex = async (req, res) => {
       reason,
     });
 
-    res.json({ message: 'Complex suspended.', complex });
+    res.json({ message: "Complejo suspendido.", complex });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({ message: "Error interno del servidor." });
   }
 };
 
 export const toggleFeatured = async (req, res) => {
   try {
     const complex = await Complex.findById(req.params.id);
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
 
     complex.isFeatured = !complex.isFeatured;
     await complex.save();
 
     res.json({ isFeatured: complex.isFeatured });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({ message: "Error interno del servidor." });
   }
 };
 
 export const deleteComplex = async (req, res) => {
   try {
     const complex = await Complex.findByIdAndDelete(req.params.id);
-    if (!complex) return res.status(404).json({ message: 'Complex not found.' });
-    res.json({ message: 'Complex deleted.' });
+    if (!complex)
+      return res.status(404).json({ message: "Complejo no encontrado." });
+    res.json({ message: "Complejo eliminado." });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({ message: "Error interno del servidor." });
   }
 };
 
@@ -502,13 +688,13 @@ export const getConfig = async (req, res) => {
     const { complexId } = req.params;
     const complex = await Complex.findById(complexId);
     if (!complex) {
-      return res.status(404).json({ message: 'Complejo no encontrado' });
+      return res.status(404).json({ message: "Complejo no encontrado" });
     }
     res.json({
       onlineStatus: complex.onlineStatus ?? true,
       publicBookingEnabled: complex.publicBookingEnabled ?? true,
-      openTime: complex.openTime || '08:00 AM',
-      closeTime: complex.closeTime || '11:00 PM',
+      openTime: complex.openTime || "08:00 AM",
+      closeTime: complex.closeTime || "11:00 PM",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -518,15 +704,16 @@ export const getConfig = async (req, res) => {
 export const updateConfig = async (req, res) => {
   try {
     const { complexId } = req.params;
-    const { onlineStatus, publicBookingEnabled, openTime, closeTime } = req.body;
+    const { onlineStatus, publicBookingEnabled, openTime, closeTime } =
+      req.body;
 
     const complex = await Complex.findByIdAndUpdate(
       complexId,
       { onlineStatus, publicBookingEnabled, openTime, closeTime },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
     if (!complex) {
-      return res.status(404).json({ message: 'Complejo no encontrado' });
+      return res.status(404).json({ message: "Complejo no encontrado" });
     }
     res.json(complex);
   } catch (error) {

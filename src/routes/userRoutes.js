@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 
 import {
   getUsers,
@@ -7,17 +7,17 @@ import {
   updateUser,
   deleteUser,
   getUserFullProfile,
-} from '../controllers/userController.js';
+} from "../controllers/userController.js";
 
 const router = express.Router();
 
-router.get('/', getUsers);
+router.get("/", getUsers);
 
-router.get('/:id/full', getUserFullProfile);
+router.get("/:id/full", getUserFullProfile);
 
-router.get('/:id', getUserById);
-router.post('/', createUser);
-router.put('/:id', updateUser);
-router.delete('/:id', deleteUser);
+router.get("/:id", getUserById);
+router.post("/", createUser);
+router.put("/:id", updateUser);
+router.delete("/:id", deleteUser);
 
 export default router;
