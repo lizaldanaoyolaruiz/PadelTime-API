@@ -359,7 +359,9 @@ export const updateComplex = async (req, res) => {
           }
           ownerUser.email = newEmail;
         }
-        await ownerUser.save();
+        if (ownerUser.isModified()) {
+          await ownerUser.save({ validateModifiedOnly: true });
+        }
       }
     }
 
@@ -374,6 +376,12 @@ export const updateComplex = async (req, res) => {
 
     res.json({ complex: data });
   } catch (error) {
+    console.error("[updateComplex] Error:", error);
+    if (error.name === "ValidationError" || error.name === "CastError") {
+      return res
+        .status(400)
+        .json({ message: "Datos inválidos para actualizar el complejo.", error: error.message });
+    }
     res
       .status(500)
       .json({ message: "Error al actualizar el complejo.", error: error.message });
@@ -640,7 +648,7 @@ export const suspendComplex = async (req, res) => {
 
     complex.status = "suspended";
     complex.rejectReason = reason;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     await ActivityLog.create({
       action: "suspended",
@@ -653,7 +661,15 @@ export const suspendComplex = async (req, res) => {
 
     res.json({ message: "Complejo suspendido.", complex });
   } catch (error) {
-    res.status(500).json({ message: "Error interno del servidor." });
+    console.error("[suspendComplex] Error:", error);
+    if (error.name === "ValidationError" || error.name === "CastError") {
+      return res
+        .status(400)
+        .json({ message: "No se pudo suspender: datos del complejo inválidos.", error: error.message });
+    }
+    res
+      .status(500)
+      .json({ message: "Error interno del servidor al suspender el complejo.", error: error.message });
   }
 };
 
