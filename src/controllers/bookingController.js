@@ -828,6 +828,84 @@ export const editarReserva = async (req, res) => {
   }
 };
 
+export const generarPagoReserva = async (req, res) => {
+  try {
+    const reserva = await Booking.findById(req.params.id)
+      .populate("court", "_id name")
+      .populate({
+        path: "complex",
+        select: "_id name whatsapp mercadopagoActive depositPercentage +mpAccessToken",
+      })
+      .populate("player", "_id name email");
+
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
+
+    const esJugadorDueno =
+      req.user.role === "player" &&
+      reserva.player &&
+      reserva.player._id.equals(req.user._id);
+    const esAdmin = ["admin", "superadmin"].includes(req.user.role);
+
+    if (!esJugadorDueno && !esAdmin) {
+      return res.status(403).json({ message: "Acceso denegado." });
+    }
+
+    if (reserva.status !== "pending") {
+      return res
+        .status(400)
+        .json({ message: "Solo se pueden pagar reservas pendientes." });
+    }
+
+    const fechaHoraInicio = new Date(`${reserva.date}T${reserva.startTime}:00`);
+    if (fechaHoraInicio <= new Date()) {
+      return res.status(400).json({
+        message: "No se puede pagar una reserva con fecha y hora ya pasada.",
+      });
+    }
+
+    if (!reserva.complex?.mercadopagoActive) {
+      return res
+        .status(400)
+        .json({ message: "Este complejo no tiene Mercado Pago habilitado." });
+    }
+
+    const tokenDescifrado = decrypt(reserva.complex.mpAccessToken);
+    if (!tokenDescifrado) {
+      return res.status(400).json({
+        message: "El complejo no tiene una cuenta de Mercado Pago configurada.",
+      });
+    }
+
+    try {
+      const preferencia = await createPreference(tokenDescifrado, {
+        booking: reserva,
+        complex: reserva.complex,
+        court: reserva.court,
+      });
+
+      reserva.preferenceId = preferencia.id;
+      reserva.confirmationMethod = "mercadopago";
+      await reserva.save({ validateModifiedOnly: true });
+
+      return res.json({ payment: { initPoint: preferencia.init_point } });
+    } catch (mpError) {
+      console.error(
+        "[generarPagoReserva] Error creando preferencia:",
+        mpError.message,
+      );
+      return res.status(502).json({
+        message: "Error al conectar con Mercado Pago. Intentá nuevamente.",
+      });
+    }
+  } catch (error) {
+    console.error("[generarPagoReserva] Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al generar el pago.", error: error.message });
+  }
+};
+
 export const eliminarReserva = async (req, res) => {
   try {
     const reserva = await Booking.findById(req.params.id);

@@ -12,6 +12,7 @@ import {
   cancelarReserva,
   editarReserva,
   eliminarReserva,
+  generarPagoReserva,
   limpiarReservasMPPendientes,
 } from "../controllers/bookingController.js";
 import { protect } from "../middlewares/authMiddleware.js";
@@ -57,6 +58,7 @@ router.patch(
   rechazarReserva,
 );
 router.patch("/:id/cancel", protect, cancelarReserva);
+router.post("/:id/pay", protect, generarPagoReserva);
 router.patch("/:id", protect, editBookingRules, validate, editarReserva);
 router.delete("/:id", protect, eliminarReserva);
 
