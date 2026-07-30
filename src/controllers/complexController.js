@@ -5,6 +5,7 @@ import cloudinary from "../config/cloudinary.js";
 import Complex from "../models/Complex.js";
 import Court from "../models/Court.js";
 import User from "../models/User.js";
+import Booking from "../models/Booking.js";
 import ActivityLog from "../models/ActivityLog.js";
 import {
   sendApprovalEmail,
@@ -688,8 +689,37 @@ export const toggleFeatured = async (req, res) => {
   }
 };
 
+export const getActiveBookingsCount = async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const activeBookings = await Booking.countDocuments({
+      complex: req.params.id,
+      status: { $in: ["pending", "confirmed"] },
+      date: { $gte: today },
+    });
+    res.json({ activeBookings });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener las reservas activas del complejo." });
+  }
+};
+
 export const deleteComplex = async (req, res) => {
   try {
+    const today = new Date().toISOString().split("T")[0];
+    const activeBookings = await Booking.countDocuments({
+      complex: req.params.id,
+      status: { $in: ["pending", "confirmed"] },
+      date: { $gte: today },
+    });
+    if (activeBookings > 0) {
+      return res.status(409).json({
+        message: `No se puede eliminar el complejo: tiene ${activeBookings} alquiler(es) activo(s) para fechas futuras.`,
+        activeBookings,
+      });
+    }
+
     const complex = await Complex.findByIdAndDelete(req.params.id);
     if (!complex)
       return res.status(404).json({ message: "Complejo no encontrado." });
