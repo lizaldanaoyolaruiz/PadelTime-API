@@ -37,7 +37,7 @@ const processPaymentNotification = async (bookingId, paymentId) => {
 
   if (payment.status === "approved") {
     booking.status = "confirmed";
-    await booking.save();
+    await booking.save({ validateModifiedOnly: true });
 
     if (booking.player?.email) {
       await sendBookingConfirmationEmail(booking).catch((err) =>
@@ -46,7 +46,7 @@ const processPaymentNotification = async (bookingId, paymentId) => {
     }
   } else if (payment.status === "rejected") {
     booking.status = "cancelled";
-    await booking.save();
+    await booking.save({ validateModifiedOnly: true });
   }
 };
 

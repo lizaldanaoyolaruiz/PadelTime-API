@@ -98,7 +98,7 @@ export const resendVerification = async (req, res) => {
 
     const token = crypto.randomBytes(32).toString("hex");
     user.verificationToken = token;
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     await sendVerificationEmail(user, token);
 
@@ -129,7 +129,7 @@ export const verifyEmail = async (req, res) => {
 
     user.isVerified = true;
     user.verificationToken = undefined;
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     res.json({ message: "Email verificado correctamente. Ya podés iniciar sesión." });
   } catch (error) {
@@ -178,7 +178,7 @@ export const updateMe = async (req, res) => {
     if (email) user.email = email.toLowerCase();
     if (password) user.password = password;
 
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
     res.json({ user: formatUser(user) });
   } catch (error) {
     res

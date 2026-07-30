@@ -86,7 +86,7 @@ export const updateAdminUser = async (req, res) => {
     if (location !== undefined) user.location = location;
     if (password) user.password = password;
 
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     const { password: _pw, ...safe } = user.toObject();
     res.json({ user: safe });
@@ -135,17 +135,17 @@ export const toggleAdminStatus = async (req, res) => {
     }
 
     user.status = status;
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     const complex = await Complex.findOne({ owner: user._id });
     if (complex) {
       if (status === "suspended") {
         complex.status = "suspended";
-        await complex.save();
+        await complex.save({ validateModifiedOnly: true });
         await Court.updateMany({ complex: complex._id }, { enabled: false });
       } else if (status === "approved" && complex.status === "suspended") {
         complex.status = "approved";
-        await complex.save();
+        await complex.save({ validateModifiedOnly: true });
         await Court.updateMany({ complex: complex._id }, { enabled: true });
       }
     }
@@ -196,7 +196,7 @@ export const approveAdmin = async (req, res) => {
     }
 
     user.status = "approved";
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     sendApprovalEmail(user).catch((err) =>
       console.error("[email] Error de aprobación:", err.message),
@@ -222,7 +222,7 @@ export const rejectAdmin = async (req, res) => {
     }
 
     user.status = "rejected";
-    await user.save();
+    await user.save({ validateModifiedOnly: true });
 
     sendRejectionEmail(user, reason).catch((err) =>
       console.error("[email] Error de rechazo:", err.message),
