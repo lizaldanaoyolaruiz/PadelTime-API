@@ -285,7 +285,7 @@ export const deleteMpToken = async (req, res) => {
     complex.mpAccessToken = undefined;
     complex.mercadopagoPublicKey = undefined;
     complex.mercadopagoActive = false;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     return res.json({
       message: "Token de Mercado Pago eliminado correctamente.",
@@ -366,7 +366,7 @@ export const updateComplex = async (req, res) => {
       }
     }
 
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
     const updated = await Complex.findById(complex._id).populate(
       "owner",
       "name email",
@@ -426,7 +426,7 @@ export const createComplexByAdmin = async (req, res) => {
 
     if (owner?.trim() && owner.trim() !== ownerUser.name) {
       ownerUser.name = owner.trim();
-      await ownerUser.save();
+      await ownerUser.save({ validateModifiedOnly: true });
     }
 
     const complex = await Complex.create({
@@ -472,7 +472,7 @@ export const uploadPhotos = async (req, res) => {
 
     complex.photos.push(...results.map((r) => r.secure_url));
     if (!complex.image) complex.image = results[0].secure_url;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     res.json({ photos: complex.photos });
   } catch (error) {
@@ -500,7 +500,7 @@ export const setPrincipalPhoto = async (req, res) => {
     }
 
     complex.image = url;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     res.json({ image: complex.image });
   } catch (error) {
@@ -526,7 +526,7 @@ export const deletePhoto = async (req, res) => {
     const { url } = req.body;
     complex.photos = complex.photos.filter((p) => p !== url);
     if (complex.image === url) complex.image = complex.photos[0] || null;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     const segments = url.split("/");
     const publicId = `padeltime/complexes/${complex._id}/${segments[segments.length - 1].split(".")[0]}`;
@@ -584,7 +584,7 @@ export const approveComplex = async (req, res) => {
 
     complex.status = "approved";
     complex.rejectReason = undefined;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     await ActivityLog.create({
       action: "approved",
@@ -616,7 +616,7 @@ export const rejectComplex = async (req, res) => {
 
     complex.status = "rejected";
     complex.rejectReason = reason;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     await ActivityLog.create({
       action: "rejected",
@@ -681,7 +681,7 @@ export const toggleFeatured = async (req, res) => {
       return res.status(404).json({ message: "Complejo no encontrado." });
 
     complex.isFeatured = !complex.isFeatured;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     res.json({ isFeatured: complex.isFeatured });
   } catch (error) {

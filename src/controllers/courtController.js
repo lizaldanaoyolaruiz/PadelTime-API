@@ -137,7 +137,7 @@ export const updateCourt = async (req, res) => {
       court.photo = result.secure_url;
     }
 
-    await court.save();
+    await court.save({ validateModifiedOnly: true });
     res.json({ court });
   } catch (error) {
     res
@@ -227,7 +227,7 @@ export const uploadCourtPhotos = async (req, res) => {
 
     court.photos = [...(court.photos || []), ...urls];
     if (!court.photo) court.photo = urls[0];
-    await court.save();
+    await court.save({ validateModifiedOnly: true });
 
     res.json({ photos: court.photos, photo: court.photo });
   } catch (error) {
@@ -252,7 +252,7 @@ export const deleteCourtPhoto = async (req, res) => {
     const { url } = req.body;
     court.photos = (court.photos || []).filter((u) => u !== url);
     if (court.photo === url) court.photo = court.photos[0] || null;
-    await court.save();
+    await court.save({ validateModifiedOnly: true });
 
     res.json({ photos: court.photos, photo: court.photo });
   } catch (error) {
@@ -279,7 +279,7 @@ export const setCourtPrincipalPhoto = async (req, res) => {
       return res.status(400).json({ message: "La foto no pertenece a esta cancha." });
 
     court.photo = url;
-    await court.save();
+    await court.save({ validateModifiedOnly: true });
 
     res.json({ photo: court.photo });
   } catch (error) {
@@ -440,7 +440,7 @@ export const updateCourtSchedule = async (req, res) => {
 
     court.schedule = schedule;
     if (active !== undefined) court.enabled = Boolean(active);
-    await court.save();
+    await court.save({ validateModifiedOnly: true });
 
     res.json({ message: "Horarios actualizados correctamente.", court });
   } catch (error) {

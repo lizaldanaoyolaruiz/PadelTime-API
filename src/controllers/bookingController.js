@@ -340,7 +340,7 @@ export const createBooking = async (req, res) => {
         (Date.now() - new Date(conflicto.createdAt).getTime()) / 60000;
       if (samePlayer || minutosTranscurridos > 5) {
         conflicto.status = "cancelled";
-        await conflicto.save();
+        await conflicto.save({ validateModifiedOnly: true });
         conflicto = null;
       }
     }
@@ -419,7 +419,7 @@ export const createBooking = async (req, res) => {
       });
 
       reserva.preferenceId = preferencia.id;
-      await reserva.save();
+      await reserva.save({ validateModifiedOnly: true });
 
       return res.status(201).json({
         booking: reserva,
@@ -428,7 +428,7 @@ export const createBooking = async (req, res) => {
     } catch (mpError) {
       console.error("[MP] Error creando preferencia:", mpError.message);
       reserva.status = "cancelled";
-      await reserva.save();
+      await reserva.save({ validateModifiedOnly: true });
       return res
         .status(500)
         .json({
@@ -526,7 +526,7 @@ export const verificarPagoMP = async (req, res) => {
     if (pagoAprobado) {
       reserva.paymentId = String(pagoAprobado.id);
       reserva.status = "confirmed";
-      await reserva.save();
+      await reserva.save({ validateModifiedOnly: true });
       sendBookingConfirmationEmail(reserva).catch((err) =>
         console.error("[Email] Error enviando confirmación:", err.message),
       );
@@ -587,7 +587,7 @@ export const confirmarPago = async (req, res) => {
     if (["rejected", "cancelled", "null"].includes(collectionStatus)) {
       if (reserva.status === "pending") {
         reserva.status = "cancelled";
-        await reserva.save();
+        await reserva.save({ validateModifiedOnly: true });
       }
       return res
         .status(400)
@@ -598,7 +598,7 @@ export const confirmarPago = async (req, res) => {
 
     if (paymentId) reserva.paymentId = paymentId;
     reserva.status = "confirmed";
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name type" },
@@ -639,7 +639,7 @@ export const confirmarReserva = async (req, res) => {
     }
 
     reserva.status = "confirmed";
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name" },
@@ -680,7 +680,7 @@ export const rechazarReserva = async (req, res) => {
     const motivo = req.body.reason || "";
     reserva.status = "rejected";
     if (motivo) reserva.observaciones = motivo;
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name" },
@@ -730,7 +730,7 @@ export const cancelarReserva = async (req, res) => {
     }
 
     reserva.status = "cancelled";
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name" },
@@ -812,7 +812,7 @@ export const editarReserva = async (req, res) => {
     reserva.startTime = startTime;
     reserva.endTime = endTime;
     reserva.status = "pending";
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name" },
