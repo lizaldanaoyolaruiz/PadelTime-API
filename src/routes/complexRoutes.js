@@ -17,6 +17,7 @@ import {
   rejectComplex,
   suspendComplex,
   deleteComplex,
+  getActiveBookingsCount,
   toggleFeatured,
   getMyComplexes,
   getConfig,
@@ -94,6 +95,12 @@ router.post(
   createComplexByAdmin,
 );
 router.delete("/:id", protect, requireRole("superadmin"), deleteComplex);
+router.get(
+  "/:id/active-bookings-count",
+  protect,
+  requireRole("superadmin"),
+  getActiveBookingsCount,
+);
 router.patch(
   "/:id/featured",
   protect,

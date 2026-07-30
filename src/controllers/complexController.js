@@ -5,6 +5,7 @@ import cloudinary from "../config/cloudinary.js";
 import Complex from "../models/Complex.js";
 import Court from "../models/Court.js";
 import User from "../models/User.js";
+import Booking from "../models/Booking.js";
 import ActivityLog from "../models/ActivityLog.js";
 import {
   sendApprovalEmail,
@@ -284,7 +285,7 @@ export const deleteMpToken = async (req, res) => {
     complex.mpAccessToken = undefined;
     complex.mercadopagoPublicKey = undefined;
     complex.mercadopagoActive = false;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     return res.json({
       message: "Token de Mercado Pago eliminado correctamente.",
@@ -359,11 +360,13 @@ export const updateComplex = async (req, res) => {
           }
           ownerUser.email = newEmail;
         }
-        await ownerUser.save();
+        if (ownerUser.isModified()) {
+          await ownerUser.save({ validateModifiedOnly: true });
+        }
       }
     }
 
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
     const updated = await Complex.findById(complex._id).populate(
       "owner",
       "name email",
@@ -374,6 +377,12 @@ export const updateComplex = async (req, res) => {
 
     res.json({ complex: data });
   } catch (error) {
+    console.error("[updateComplex] Error:", error);
+    if (error.name === "ValidationError" || error.name === "CastError") {
+      return res
+        .status(400)
+        .json({ message: "Datos inválidos para actualizar el complejo.", error: error.message });
+    }
     res
       .status(500)
       .json({ message: "Error al actualizar el complejo.", error: error.message });
@@ -417,7 +426,7 @@ export const createComplexByAdmin = async (req, res) => {
 
     if (owner?.trim() && owner.trim() !== ownerUser.name) {
       ownerUser.name = owner.trim();
-      await ownerUser.save();
+      await ownerUser.save({ validateModifiedOnly: true });
     }
 
     const complex = await Complex.create({
@@ -463,7 +472,7 @@ export const uploadPhotos = async (req, res) => {
 
     complex.photos.push(...results.map((r) => r.secure_url));
     if (!complex.image) complex.image = results[0].secure_url;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     res.json({ photos: complex.photos });
   } catch (error) {
@@ -491,7 +500,7 @@ export const setPrincipalPhoto = async (req, res) => {
     }
 
     complex.image = url;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     res.json({ image: complex.image });
   } catch (error) {
@@ -517,7 +526,7 @@ export const deletePhoto = async (req, res) => {
     const { url } = req.body;
     complex.photos = complex.photos.filter((p) => p !== url);
     if (complex.image === url) complex.image = complex.photos[0] || null;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     const segments = url.split("/");
     const publicId = `padeltime/complexes/${complex._id}/${segments[segments.length - 1].split(".")[0]}`;
@@ -575,7 +584,7 @@ export const approveComplex = async (req, res) => {
 
     complex.status = "approved";
     complex.rejectReason = undefined;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     await ActivityLog.create({
       action: "approved",
@@ -607,7 +616,7 @@ export const rejectComplex = async (req, res) => {
 
     complex.status = "rejected";
     complex.rejectReason = reason;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     await ActivityLog.create({
       action: "rejected",
@@ -640,7 +649,7 @@ export const suspendComplex = async (req, res) => {
 
     complex.status = "suspended";
     complex.rejectReason = reason;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     await ActivityLog.create({
       action: "suspended",
@@ -653,7 +662,15 @@ export const suspendComplex = async (req, res) => {
 
     res.json({ message: "Complejo suspendido.", complex });
   } catch (error) {
-    res.status(500).json({ message: "Error interno del servidor." });
+    console.error("[suspendComplex] Error:", error);
+    if (error.name === "ValidationError" || error.name === "CastError") {
+      return res
+        .status(400)
+        .json({ message: "No se pudo suspender: datos del complejo inválidos.", error: error.message });
+    }
+    res
+      .status(500)
+      .json({ message: "Error interno del servidor al suspender el complejo.", error: error.message });
   }
 };
 
@@ -664,7 +681,7 @@ export const toggleFeatured = async (req, res) => {
       return res.status(404).json({ message: "Complejo no encontrado." });
 
     complex.isFeatured = !complex.isFeatured;
-    await complex.save();
+    await complex.save({ validateModifiedOnly: true });
 
     res.json({ isFeatured: complex.isFeatured });
   } catch (error) {
@@ -672,8 +689,37 @@ export const toggleFeatured = async (req, res) => {
   }
 };
 
+export const getActiveBookingsCount = async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const activeBookings = await Booking.countDocuments({
+      complex: req.params.id,
+      status: { $in: ["pending", "confirmed"] },
+      date: { $gte: today },
+    });
+    res.json({ activeBookings });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error al obtener las reservas activas del complejo." });
+  }
+};
+
 export const deleteComplex = async (req, res) => {
   try {
+    const today = new Date().toISOString().split("T")[0];
+    const activeBookings = await Booking.countDocuments({
+      complex: req.params.id,
+      status: { $in: ["pending", "confirmed"] },
+      date: { $gte: today },
+    });
+    if (activeBookings > 0) {
+      return res.status(409).json({
+        message: `No se puede eliminar el complejo: tiene ${activeBookings} alquiler(es) activo(s) para fechas futuras.`,
+        activeBookings,
+      });
+    }
+
     const complex = await Complex.findByIdAndDelete(req.params.id);
     if (!complex)
       return res.status(404).json({ message: "Complejo no encontrado." });

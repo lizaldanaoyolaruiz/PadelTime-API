@@ -340,7 +340,7 @@ export const createBooking = async (req, res) => {
         (Date.now() - new Date(conflicto.createdAt).getTime()) / 60000;
       if (samePlayer || minutosTranscurridos > 5) {
         conflicto.status = "cancelled";
-        await conflicto.save();
+        await conflicto.save({ validateModifiedOnly: true });
         conflicto = null;
       }
     }
@@ -419,7 +419,7 @@ export const createBooking = async (req, res) => {
       });
 
       reserva.preferenceId = preferencia.id;
-      await reserva.save();
+      await reserva.save({ validateModifiedOnly: true });
 
       return res.status(201).json({
         booking: reserva,
@@ -428,7 +428,7 @@ export const createBooking = async (req, res) => {
     } catch (mpError) {
       console.error("[MP] Error creando preferencia:", mpError.message);
       reserva.status = "cancelled";
-      await reserva.save();
+      await reserva.save({ validateModifiedOnly: true });
       return res
         .status(500)
         .json({
@@ -526,7 +526,7 @@ export const verificarPagoMP = async (req, res) => {
     if (pagoAprobado) {
       reserva.paymentId = String(pagoAprobado.id);
       reserva.status = "confirmed";
-      await reserva.save();
+      await reserva.save({ validateModifiedOnly: true });
       sendBookingConfirmationEmail(reserva).catch((err) =>
         console.error("[Email] Error enviando confirmación:", err.message),
       );
@@ -587,7 +587,7 @@ export const confirmarPago = async (req, res) => {
     if (["rejected", "cancelled", "null"].includes(collectionStatus)) {
       if (reserva.status === "pending") {
         reserva.status = "cancelled";
-        await reserva.save();
+        await reserva.save({ validateModifiedOnly: true });
       }
       return res
         .status(400)
@@ -598,7 +598,7 @@ export const confirmarPago = async (req, res) => {
 
     if (paymentId) reserva.paymentId = paymentId;
     reserva.status = "confirmed";
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name type" },
@@ -639,7 +639,7 @@ export const confirmarReserva = async (req, res) => {
     }
 
     reserva.status = "confirmed";
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name" },
@@ -680,7 +680,7 @@ export const rechazarReserva = async (req, res) => {
     const motivo = req.body.reason || "";
     reserva.status = "rejected";
     if (motivo) reserva.observaciones = motivo;
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name" },
@@ -730,7 +730,7 @@ export const cancelarReserva = async (req, res) => {
     }
 
     reserva.status = "cancelled";
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name" },
@@ -812,7 +812,7 @@ export const editarReserva = async (req, res) => {
     reserva.startTime = startTime;
     reserva.endTime = endTime;
     reserva.status = "pending";
-    await reserva.save();
+    await reserva.save({ validateModifiedOnly: true });
 
     await reserva.populate([
       { path: "court", select: "_id name" },
@@ -825,6 +825,84 @@ export const editarReserva = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Error al editar la reserva.", error: error.message });
+  }
+};
+
+export const generarPagoReserva = async (req, res) => {
+  try {
+    const reserva = await Booking.findById(req.params.id)
+      .populate("court", "_id name")
+      .populate({
+        path: "complex",
+        select: "_id name whatsapp mercadopagoActive depositPercentage +mpAccessToken",
+      })
+      .populate("player", "_id name email");
+
+    if (!reserva)
+      return res.status(404).json({ message: "Reserva no encontrada." });
+
+    const esJugadorDueno =
+      req.user.role === "player" &&
+      reserva.player &&
+      reserva.player._id.equals(req.user._id);
+    const esAdmin = ["admin", "superadmin"].includes(req.user.role);
+
+    if (!esJugadorDueno && !esAdmin) {
+      return res.status(403).json({ message: "Acceso denegado." });
+    }
+
+    if (reserva.status !== "pending") {
+      return res
+        .status(400)
+        .json({ message: "Solo se pueden pagar reservas pendientes." });
+    }
+
+    const fechaHoraInicio = new Date(`${reserva.date}T${reserva.startTime}:00`);
+    if (fechaHoraInicio <= new Date()) {
+      return res.status(400).json({
+        message: "No se puede pagar una reserva con fecha y hora ya pasada.",
+      });
+    }
+
+    if (!reserva.complex?.mercadopagoActive) {
+      return res
+        .status(400)
+        .json({ message: "Este complejo no tiene Mercado Pago habilitado." });
+    }
+
+    const tokenDescifrado = decrypt(reserva.complex.mpAccessToken);
+    if (!tokenDescifrado) {
+      return res.status(400).json({
+        message: "El complejo no tiene una cuenta de Mercado Pago configurada.",
+      });
+    }
+
+    try {
+      const preferencia = await createPreference(tokenDescifrado, {
+        booking: reserva,
+        complex: reserva.complex,
+        court: reserva.court,
+      });
+
+      reserva.preferenceId = preferencia.id;
+      reserva.confirmationMethod = "mercadopago";
+      await reserva.save({ validateModifiedOnly: true });
+
+      return res.json({ payment: { initPoint: preferencia.init_point } });
+    } catch (mpError) {
+      console.error(
+        "[generarPagoReserva] Error creando preferencia:",
+        mpError.message,
+      );
+      return res.status(502).json({
+        message: "Error al conectar con Mercado Pago. Intentá nuevamente.",
+      });
+    }
+  } catch (error) {
+    console.error("[generarPagoReserva] Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al generar el pago.", error: error.message });
   }
 };
 

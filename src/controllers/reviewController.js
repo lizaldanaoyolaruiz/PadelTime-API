@@ -203,7 +203,7 @@ export const updateReview = async (req, res) => {
     if (comment !== undefined) review.comment = comment;
     if (tags !== undefined) review.tags = Array.isArray(tags) ? tags : [];
 
-    await review.save();
+    await review.save({ validateModifiedOnly: true });
     await recalculateComplexRating(review.complex);
 
     res.json({ message: "Valoración actualizada.", review });
