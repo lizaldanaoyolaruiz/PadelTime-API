@@ -201,6 +201,16 @@ export const complexAdminCreateRules = [
     .withMessage("La provincia debe tener entre 3 y 50 caracteres.")
     .matches(LETTERS_RE)
     .withMessage("La provincia solo puede contener letras."),
+  body("openTime")
+    .notEmpty()
+    .withMessage("El horario de apertura es requerido.")
+    .matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .withMessage("El horario de apertura debe tener formato HH:MM."),
+  body("closeTime")
+    .notEmpty()
+    .withMessage("El horario de cierre es requerido.")
+    .matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .withMessage("El horario de cierre debe tener formato HH:MM."),
   body("observations")
     .optional()
     .trim()
