@@ -6,6 +6,8 @@ import Complex from "../models/Complex.js";
 import Court from "../models/Court.js";
 import User from "../models/User.js";
 import Booking from "../models/Booking.js";
+import Blockout from "../models/Blockout.js";
+import MaintenanceSlot from "../models/MaintenanceSlot.js";
 import ActivityLog from "../models/ActivityLog.js";
 import {
   sendApprovalEmail,
@@ -332,6 +334,9 @@ export const updateComplex = async (req, res) => {
       if (req.body[f] !== undefined) complex[f] = req.body[f];
     });
     if (req.body.address !== undefined) complex.location = req.body.address;
+    if (req.body.phone !== undefined && req.body.whatsapp === undefined) {
+      complex.whatsapp = req.body.phone;
+    }
 
     if (req.body.mpAccessToken?.trim()) {
       complex.mpAccessToken = encrypt(req.body.mpAccessToken.trim());
@@ -401,6 +406,8 @@ export const createComplexByAdmin = async (req, res) => {
       address,
       province,
       observations,
+      openTime,
+      closeTime,
     } = req.body;
 
     const ownerUser = await User.findOne({
@@ -435,11 +442,27 @@ export const createComplexByAdmin = async (req, res) => {
       city,
       location: address,
       phone,
+      whatsapp: phone,
       courts,
       province,
       observations,
+      openTime,
+      closeTime,
       status: "approved",
     });
+
+    const courtsCount = Number(courts) || 0;
+    if (courtsCount > 0) {
+      const placeholderCourts = Array.from({ length: courtsCount }, (_, i) => ({
+        complex: complex._id,
+        name: `Cancha ${i + 1}`,
+        type: "crystal",
+        description:
+          "Cancha creada automáticamente. Editá sus detalles desde el panel del propietario.",
+        enabled: true,
+      }));
+      await Court.insertMany(placeholderCourts);
+    }
 
     const populated = await complex.populate("owner", "name email");
     res.status(201).json({ complex: populated });
@@ -723,6 +746,13 @@ export const deleteComplex = async (req, res) => {
     const complex = await Complex.findByIdAndDelete(req.params.id);
     if (!complex)
       return res.status(404).json({ message: "Complejo no encontrado." });
+
+    await Promise.all([
+      Court.deleteMany({ complex: complex._id }),
+      Blockout.deleteMany({ complexId: complex._id }),
+      MaintenanceSlot.deleteMany({ complex: complex._id }),
+    ]);
+
     res.json({ message: "Complejo eliminado." });
   } catch (error) {
     res.status(500).json({ message: "Error interno del servidor." });
