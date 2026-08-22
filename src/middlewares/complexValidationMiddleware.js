@@ -181,6 +181,11 @@ export const complexAdminCreateRules = [
     .withMessage("El número de pistas es requerido.")
     .isInt({ min: 1, max: 50 })
     .withMessage("El número de pistas debe ser entre 1 y 50."),
+  body("price")
+    .notEmpty()
+    .withMessage("El precio es requerido.")
+    .isFloat({ min: 0.01, max: 999999 })
+    .withMessage("El precio debe ser mayor a 0 y máximo $999.999."),
   body("city")
     .trim()
     .notEmpty()
