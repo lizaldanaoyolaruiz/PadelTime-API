@@ -411,7 +411,25 @@ Las imágenes de complejos y canchas se suben a Cloudinary y se almacenan las UR
 
 ### Mercado Pago
 
-El propietario configura su Master Key desde el panel. Al realizar una reserva con seña, se crea una preferencia de pago y se redirige al usuario al checkout de Mercado Pago. Un webhook notifica al backend cuando el pago se acredita y la reserva pasa a `confirmed` automáticamente.
+La integración es **por complejo, no global**: cada dueño de club conecta su propia cuenta de Mercado Pago desde su panel (`Configuración de Pagos`), pegando el **Access Token** de su propia aplicación de Mercado Pago (formato `APP_USR-...`). No existe una cuenta única de la plataforma que centralice los cobros.
+
+**Por qué es así:** el pago de una reserva tiene que acreditarse en la cuenta del dueño del complejo donde se juega, no en una cuenta compartida. Si la plataforma usara un solo token para todos los complejos, el dinero de cualquier reserva terminaría depositado en esa única cuenta en lugar de en la del club real — dejaría de ser un tema de UI y pasaría a ser un problema de facturación.
+
+**Cómo funciona en el modelo `Complex`:**
+
+| Campo               | Descripción                                                              |
+| ------------------- | ------------------------------------------------------------------------- |
+| `mpAccessToken`      | Access Token del dueño, cifrado (`utils/encryption.js`) antes de guardarse en Mongo. Nunca se expone en las respuestas de la API. |
+| `mercadopagoActive`  | `true` una vez que el complejo tiene un token válido cargado.             |
+
+**Flujo de pago:**
+
+1. Al confirmar una reserva, el backend busca el complejo de esa cancha y desencripta su `mpAccessToken`.
+2. Si `mercadopagoActive` es `false` (el dueño todavía no conectó su cuenta), la app solo ofrece **"Reservar vía WhatsApp"** — no es un error, es el fallback esperado.
+3. Si está activo, se crea una preferencia de pago con ese token puntual y se redirige al usuario al checkout de Mercado Pago.
+4. Un webhook (`/payments/webhook`) notifica al backend cuando el pago se acredita, y la reserva pasa a `confirmed` automáticamente.
+
+Cada complejo cobra a través de su propia cuenta; la plataforma no retiene ni redirige esos fondos.
 
 ### SMTP / Nodemailer
 
